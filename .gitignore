@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+
+# Env secrets
+.env
+.env.*.local
+.env.local
+
+# Node / Bun
+node_modules/
+*.log
+
+# Builds
+dist/
+out/
+build/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+Secrets.xcconfig
+
+# IDE
+.idea/
+.vscode/
+
+# Claude Code local state
+.claude/
