@@ -36,3 +36,4 @@ Concrete only. Numbers, file paths, commit hashes. No "lessons learned" essays.
 - **Fix**: (1) wrap the session in an `@unchecked Sendable` `SessionBox` to carry it into the detached task; the photo-capture delegate maps to a `Sendable Result<Data, CameraError>` before hopping to `@MainActor`. (2) extract the label into a `SourceButtonLabel: View` struct (constructed, not a MainActor method call). Files: `ios-app/SmartGlass/Camera.swift`, `ios-app/SmartGlass/ScanView.swift`.
 - **Commit**: 9272b69
 - **Pattern**: Under strict concurrency, move non-Sendable AVFoundation types into a background `Task` via an `@unchecked Sendable` box, and build reusable SwiftUI labels as `View` structs (not `@MainActor` methods) so nonisolated closures can construct them.
+<!-- skipped: 7cfb48e docs(log): record live-camera feature + first troubleshooting entry [no-log] -->

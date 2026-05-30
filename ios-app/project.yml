@@ -31,6 +31,8 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSCameraUsageDescription: "Scan menus and signs in front of you to translate them to Korean."
+        # 기본은 시뮬레이터용 localhost. 실기기 테스트 시 Mac의 ngrok https URL로 바꾸고 xcodegen 재생성.
+        BackendBaseURL: "http://localhost:3001"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.smartglass.app

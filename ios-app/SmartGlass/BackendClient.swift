@@ -32,7 +32,10 @@ private struct ErrorBody: Decodable {
 }
 
 enum Backend {
-    static let baseURL = "http://localhost:3001"
+    // 시뮬레이터: localhost(=Mac). 실기기: Info.plist의 BackendBaseURL로
+    // Mac의 ngrok https URL(또는 LAN IP)을 지정 — 폰의 localhost는 폰 자신이라 안 됨.
+    static let baseURL = (Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String)
+        ?? "http://localhost:3001"
 
     static func suggestions(text: String) async throws -> SuggestResponse {
         try await post("/api/suggest", ["text": text])
