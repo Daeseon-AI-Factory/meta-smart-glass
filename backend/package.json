@@ -13,5 +13,9 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "openai": "^6.39.1"
   }
 }
