@@ -9,10 +9,11 @@ enum ScanStatus: Equatable {
     case failure(String)
 }
 
-// 스캔 → 번역: (mock글래스/폰)사진 → Vision OCR → /api/translate → HUD.
-// 지금 소스는 PhotosPicker(시뮬에서도 됨). 등록 후 카메라/MWDAT 피드로 교체 예정.
+// 스캔 → 번역: 이미지 → Vision OCR → /api/translate → HUD.
+// 소스는 라이브 카메라(실기기) 또는 PhotosPicker(시뮬). 등록 후 MWDAT 글래스 피드로 교체 예정.
 struct ScanView: View {
     @State private var pickedItem: PhotosPickerItem?
+    @State private var showCamera = false
     @State private var previewImage: Image?
     @State private var ocrText: String = ""
     @State private var translation: String = ""
@@ -26,14 +27,7 @@ struct ScanView: View {
                     .font(.system(size: 22, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.white)
 
-                PhotosPicker(selection: $pickedItem, matching: .images) {
-                    Label("Pick a menu / sign photo", systemImage: "camera.viewfinder")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.green)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.green.opacity(0.12)))
-                }
+                sourceRow
 
                 if let previewImage {
                     previewImage
@@ -53,6 +47,26 @@ struct ScanView: View {
         }
         .onChange(of: pickedItem) { _, newItem in
             Task { await handlePick(newItem) }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraCaptureView(
+                onCapture: { data in
+                    showCamera = false
+                    Task { await process(data) }
+                },
+                onCancel: { showCamera = false },
+            )
+        }
+    }
+
+    private var sourceRow: some View {
+        HStack(spacing: 10) {
+            Button(action: { showCamera = true }) {
+                SourceButtonLabel(title: "Camera", systemImage: "camera.fill")
+            }
+            PhotosPicker(selection: $pickedItem, matching: .images) {
+                SourceButtonLabel(title: "Photo", systemImage: "photo.on.rectangle")
+            }
         }
     }
 
@@ -104,20 +118,29 @@ struct ScanView: View {
     @MainActor
     private func handlePick(_ item: PhotosPickerItem?) async {
         guard let item else { return }
-        previewImage = nil
-        ocrText = ""
-        translation = ""
         status = .loading("reading photo…")
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
+                resetOutputs()
                 status = .failure("couldn't load the photo")
                 return
             }
-            if let uiImage = UIImage(data: data) {
-                previewImage = Image(uiImage: uiImage)
-            }
+            await process(data)
+        } catch {
+            resetOutputs()
+            status = .failure(error.localizedDescription)
+        }
+    }
 
-            status = .loading("reading text…")
+    // 카메라/사진 공통 파이프라인: 이미지 Data → OCR → 번역 → 표시.
+    @MainActor
+    private func process(_ data: Data) async {
+        resetOutputs()
+        if let uiImage = UIImage(data: data) {
+            previewImage = Image(uiImage: uiImage)
+        }
+        status = .loading("reading text…")
+        do {
             let text = try await recognizeText(in: data)
             ocrText = text
             guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -134,5 +157,26 @@ struct ScanView: View {
         } catch {
             status = .failure(error.localizedDescription)
         }
+    }
+
+    private func resetOutputs() {
+        previewImage = nil
+        ocrText = ""
+        translation = ""
+    }
+}
+
+// 소스 버튼 라벨. View 구조체로 분리해 nonisolated 클로저(PhotosPicker label)에서도 생성 가능.
+private struct SourceButtonLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(.green)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.green.opacity(0.12)))
     }
 }

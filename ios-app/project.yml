@@ -30,6 +30,7 @@ targets:
         # NSAllowsLocalNetworking이 loopback/localhost 평문 로드를 허용 (App Store 안전).
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSCameraUsageDescription: "Scan menus and signs in front of you to translate them to Korean."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.smartglass.app

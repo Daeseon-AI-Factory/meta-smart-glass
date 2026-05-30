@@ -14,6 +14,7 @@
 		920F81D7385CA1D5B7530815 /* SmartGlassApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C853BF20DAD77830C36F37EF /* SmartGlassApp.swift */; };
 		A75280A01B62D21C6B27A845 /* OCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FC2F80B3E08EF2C16F26041 /* OCR.swift */; };
 		B0C32CE8CD3CBDD9740E87FA /* CoachView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B9466A9F994C7B16C91788 /* CoachView.swift */; };
+		B549A182B426F1C7F73ECD0C /* Camera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 877703D43AA41DD47F31AAE3 /* Camera.swift */; };
 		E37D2C364628AD3833119DFE /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3126AD6D1D4B0B21A1C884A9 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -25,6 +26,7 @@
 		4CAE348F4290BA8962E5353C /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
 		50A317751F93ACF9C3B55009 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
 		654DFCBAFAA2F6E6F2001A88 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		877703D43AA41DD47F31AAE3 /* Camera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Camera.swift; sourceTree = "<group>"; };
 		8D3068A83D32D095E550B32E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A5CE99DB91A162362C1BEF18 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C853BF20DAD77830C36F37EF /* SmartGlassApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartGlassApp.swift; sourceTree = "<group>"; };
@@ -60,6 +62,7 @@
 			children = (
 				654DFCBAFAA2F6E6F2001A88 /* Assets.xcassets */,
 				4CAE348F4290BA8962E5353C /* BackendClient.swift */,
+				877703D43AA41DD47F31AAE3 /* Camera.swift */,
 				26B9466A9F994C7B16C91788 /* CoachView.swift */,
 				A5CE99DB91A162362C1BEF18 /* ContentView.swift */,
 				8D3068A83D32D095E550B32E /* Info.plist */,
@@ -140,6 +143,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				90D4315656DB3EBE6BCD6B4A /* BackendClient.swift in Sources */,
+				B549A182B426F1C7F73ECD0C /* Camera.swift in Sources */,
 				B0C32CE8CD3CBDD9740E87FA /* CoachView.swift in Sources */,
 				34FE9573A92946C283108B55 /* ContentView.swift in Sources */,
 				A75280A01B62D21C6B27A845 /* OCR.swift in Sources */,
