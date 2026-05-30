@@ -1,0 +1,45 @@
+---
+title: "Phase 1 기능: /api/suggest end-to-end (GPT-4o-mini → Claude Haiku fallback)"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "첫 실제 제품 기능 — 프로바이더 fallback이 있는 백엔드 영어 코칭 제안 엔드포인트 + 이를 구동하는 SwiftUI 클라이언트. API 키 경계 전까지 검증 완료."
+tags: ["bun", "typescript", "swiftui", "ios", "openai", "anthropic", "llm"]
+---
+
+드디어 일을 하는 첫 기능: 상대방이 한 말을 받아 자연스러운 영어 답변 2-3개를 돌려준다. Phase 1 코어("영어 답변 제안")를 end-to-end로 배선.
+
+## 백엔드 — `POST /api/suggest` (커밋 `6bd6ef7`)
+
+`backend/src/index.ts`에 두 번째 라우트 추가. 오케스트레이션은 `src/api/llm.ts`에 — `CLAUDE.md`가 "Important File"로 가리켰지만 지금까지 존재하지 않던 파일(문서/코드 드리프트 해소).
+
+- **이중 프로바이더 + fallback**: OpenAI `gpt-4o-mini`(primary) → Anthropic `claude-haiku-4-5`(fallback). 키가 설정된 프로바이더만 순서대로 시도, 첫 성공이 이김.
+- **구조화 출력 3중 방어**: 양 프로바이더에 strict JSON 스키마 요청(`response_format` / `output_config`) + 시스템 프롬프트에도 정확한 JSON 형태 명시 + `src/parse.ts`가 관대하게 추출/검증(미지 tone 정규화, 빈 항목 제거). 셋 중 하나만 살아도 동작.
+- **프롬프트**(`src/prompt.ts`): english-coach 시스템 프롬프트(`prompts/english-coach.md` v0.1), `cache_control: ephemeral` 표시. 단 Haiku 4.5 최소 캐시 프리픽스는 4096토큰이고 현재 프롬프트는 훨씬 짧아 오늘은 캐싱이 무효 — 프롬프트가 커지면(개인화, 글로사리) 자동 적용.
+- **키는 서버 전용**: Bun이 `.env` 자동 로드, 클라이언트는 키를 절대 못 봄.
+
+계약:
+
+```json
+POST /api/suggest  { "text": "...", "context"?: "..." }
+→ { "suggestions": [{ "text": "...", "tone": "professional|casual|safe" }], "provider", "model", "latencyMs" }
+```
+
+## iOS — 제안 UI (커밋 `98cc004`)
+
+`ContentView.swift`가 health 폴러 HUD에서 실물로: 텍스트 입력 → async `POST /api/suggest` → tone별 색상 제안 카드(글래스 HUD 스타일). Swift 6 strict concurrency(`complete`), 전 구간 async/await.
+
+필수 변경 하나: 앱이 `http://localhost:3001`(평문)로 통신하는데 iOS App Transport Security가 기본 차단. `project.yml`이 이제 `NSAppTransportSecurity.NSAllowsLocalNetworking = true`를 담은 `Info.plist`를 생성 — loopback용 최소·App Store 안전 예외.
+
+## 검증된 것 — 그리고 안 된 것
+
+검증됨:
+- 백엔드 strict TS 타입체크 통과, `bun test` 7/7(파서).
+- `/health`·`/api/suggest` 라이브 배선: 요청이 검증 → 프로바이더 선택 → API 호출 → 에러 매핑까지 흐름. 유효 자격증명 없으면 ~0.22s만에 구조화된 502로 fast-fail.
+- iOS: `xcodebuild` → 시뮬레이터 SDK에서 **BUILD SUCCEEDED**.
+
+아직 미검증(정직하게): **프로바이더 성공 경로**. 라이브 테스트에서 `OPENAI_API_KEY` 미설정, `.env`의 `ANTHROPIC_API_KEY`는 `401 invalid x-api-key` 반환 확인. 즉 진짜 제안은 아직 안 돌아옴 — 유효 키에 막혀 있고 그건 내 몫. 3중 파싱 방어 덕에 키보다 먼저 코드를 올리는 게 부담 없다.
+
+**커밋:** 백엔드 `6bd6ef7a39feca75678def489192a9a93d62767e`, iOS `98cc004da089ddba9a74d1025b80f3b312554fb5`.
