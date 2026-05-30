@@ -25,5 +25,6 @@ Secrets.xcconfig
 .idea/
 .vscode/
 
-# Claude Code local state
-.claude/
+# Claude Code local state (keep shared project hook tracked)
+.claude/*
+!.claude/settings.json

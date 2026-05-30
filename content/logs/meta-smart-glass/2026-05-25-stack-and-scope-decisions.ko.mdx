@@ -1,0 +1,49 @@
+---
+title: "스택·범위 결정: Swift 네이티브, iOS 우선, 클라우드 LLM 우선"
+date: "2026-05-25"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "스마트글래스 영어 어시스턴트의 기반 스택과 범위를 확정 — Swift 네이티브 iOS, 로컬보다 클라우드 LLM 우선, 하드웨어 구매 대신 Mock Device Kit."
+tags: ["architecture", "swift", "ios", "llm", "decisions"]
+---
+
+코드 쓰기 전에 나중에 되돌리기 비싼 결정들부터 못 박았다. 전부 `docs/decisions.md`에 기록돼 있고, 이 글은 그 서사 버전.
+
+## Swift 네이티브 (Flutter / React Native / Web 아님)
+
+**Swift + Meta Wearables Device Access Toolkit** (iOS 네이티브) 선택.
+
+- 실시간 BLE + 카메라는 네이티브가 가장 안정적.
+- Meta가 Swift Package를 1순위로 공식 지원. Flutter wrapper(`meta_wearables`)는 커뮤니티 유지보수(v0.2.1, 메인테이너 1명).
+- Vision/AR 산업 표준이 네이티브 (HoloLens, Vision Pro).
+- AI 코딩 도구의 Swift 학습 데이터가 풍부.
+
+**감수한 trade-off:** Android는 별도 Kotlin 작업 필요 → Year 2로 미룸.
+
+## iOS 우선 (Android·크로스플랫폼 아님)
+
+- 솔로 개발자 시간 제약.
+- Ray-Ban Display 주력 사용자 = iPhone(프리미엄 시장), 그리고 본인이 iPhone 16 Pro Max 보유 → 즉시 실기기 테스트 가능.
+- Android는 검증 후 Year 2에 재검토.
+
+## 클라우드 LLM 우선 (로컬 Ollama 아님)
+
+M2 Max 로컬 모델 대신 OpenAI / Anthropic API로 시작.
+
+- 셋업 ~5분 vs 1–2시간.
+- 검증 단계에선 비용 최적화보다 빠른 iteration이 우선.
+- M2 Max(그리고 향후 Mac Mini M4 Pro 홈서버)는 나중 latency/비용 튜닝용 백업으로 남김.
+
+## 하드웨어: Mock Device Kit, 글래스 구매는 보류
+
+Ray-Ban Display($799) + 구매용 미국 출장 = 대략 $1,200–1,700 CAD. use case 검증 전엔 너무 큰 투자. Meta의 Mock Device Kit으로 시뮬레이션 가능하니, 구매 결정은 prototype 1–2개월 사용 후 진짜 매일 쓸 가치가 확인되면.
+
+## Repo: 모노레포
+
+솔로 개발자라 단일 repo. core/adapters 분리로 portable하게 유지하면서 한 곳에서 관리.
+
+---
+
+*결정 날짜는 `docs/decisions.md` 기준(2026-05-25). 해당 문서들은 2026-05-28 커밋 `b2e6721`에 git 진입.*
