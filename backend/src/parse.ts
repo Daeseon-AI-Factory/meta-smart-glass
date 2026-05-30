@@ -19,6 +19,13 @@ export function parseSuggestions(raw: string): Suggestion[] {
   return suggestions;
 }
 
+// 번역은 평문 출력. 비어있으면 실패로 보고 fallback 유도.
+export function parseTranslation(raw: string): string {
+  const text = raw.trim();
+  if (text === "") throw new Error("empty translation");
+  return text;
+}
+
 function extractJsonObject(raw: string): string {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");

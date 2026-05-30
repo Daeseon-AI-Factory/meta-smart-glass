@@ -1,4 +1,4 @@
-// 영어 답변 제안 도메인 타입 — 프로바이더/오케스트레이터/HTTP 계층이 공유.
+// 도메인/프로바이더 공유 타입.
 
 export type Tone = "professional" | "casual" | "safe";
 
@@ -9,7 +9,10 @@ export interface Suggestion {
 
 export type Provider = "openai" | "anthropic";
 
-export interface SuggestResult {
-  suggestions: Suggestion[];
-  model: string;
+// 프로바이더 공통 완성 요청.
+// schema가 있으면 구조화 JSON 출력, 없으면 평문 텍스트.
+export interface CompleteArgs {
+  system: string;
+  user: string;
+  schema?: { name: string; schema: Record<string, unknown> };
 }

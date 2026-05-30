@@ -1,36 +1,31 @@
 import OpenAI from "openai";
-import { ENGLISH_COACH_SYSTEM, SUGGESTION_SCHEMA, buildUserMessage } from "../prompt";
-import { parseSuggestions } from "../parse";
-import type { SuggestResult } from "../types";
+import type { CompleteArgs } from "../types";
 
-// Primary 프로바이더. 일관성 우선이라 temperature는 낮게(0.4).
-const MODEL = "gpt-4o-mini";
+// Primary 프로바이더. 일관성 우선이라 temperature 낮게(0.4).
+export const OPENAI_MODEL = "gpt-4o-mini";
 
-export async function suggestWithOpenAI(
-  text: string,
-  context: string | undefined,
-  signal?: AbortSignal,
-): Promise<SuggestResult> {
-  // 키 없는 환경에서 import만으로 깨지지 않도록 호출 시점에 클라이언트 생성.
+// 범용 완성. schema가 있으면 strict json_schema, 없으면 평문 텍스트.
+export async function complete(args: CompleteArgs): Promise<string> {
   const client = new OpenAI({ apiKey: requireKey() });
-  const completion = await client.chat.completions.create(
-    {
-      model: MODEL,
-      temperature: 0.4,
-      max_completion_tokens: 300,
-      messages: [
-        { role: "system", content: ENGLISH_COACH_SYSTEM },
-        { role: "user", content: buildUserMessage(text, context) },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "suggestions", strict: true, schema: SUGGESTION_SCHEMA },
-      },
-    },
-    { signal },
-  );
-  const raw = completion.choices[0]?.message.content ?? "";
-  return { suggestions: parseSuggestions(raw), model: MODEL };
+  const base = {
+    model: OPENAI_MODEL,
+    temperature: 0.4,
+    max_completion_tokens: 400,
+    messages: [
+      { role: "system" as const, content: args.system },
+      { role: "user" as const, content: args.user },
+    ],
+  };
+  const completion = args.schema
+    ? await client.chat.completions.create({
+        ...base,
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: args.schema.name, strict: true, schema: args.schema.schema },
+        },
+      })
+    : await client.chat.completions.create(base);
+  return completion.choices[0]?.message.content ?? "";
 }
 
 function requireKey(): string {

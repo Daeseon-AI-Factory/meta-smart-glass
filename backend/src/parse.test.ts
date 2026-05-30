@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { parseSuggestions } from "./parse";
+import { parseSuggestions, parseTranslation } from "./parse";
 
 test("parses clean JSON and preserves valid tones", () => {
   const raw = JSON.stringify({
@@ -46,4 +46,12 @@ test("throws when 'suggestions' is missing", () => {
 
 test("throws when every suggestion is invalid", () => {
   expect(() => parseSuggestions('{"suggestions":[{"text":""}]}')).toThrow();
+});
+
+test("parseTranslation trims surrounding whitespace", () => {
+  expect(parseTranslation("  관계자 외 출입금지\n")).toBe("관계자 외 출입금지");
+});
+
+test("parseTranslation throws on empty output", () => {
+  expect(() => parseTranslation("   ")).toThrow();
 });
