@@ -7,7 +7,7 @@ export interface Suggestion {
   tone: Tone;
 }
 
-export type Provider = "openai" | "anthropic";
+export type Provider = "gemini" | "openai" | "anthropic";
 
 // 프로바이더 공통 완성 요청.
 // schema가 있으면 구조화 JSON 출력, 없으면 평문 텍스트.
