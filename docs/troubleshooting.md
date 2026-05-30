@@ -22,3 +22,4 @@ When you fix a non-trivial issue, append an entry below. The Stop hook in `.clau
 
 Concrete only. Numbers, file paths, commit hashes. No "lessons learned" essays.
 <!-- skipped: 3614d7d Add Claude Code project-log system + backfill project history [no-log] -->
+<!-- skipped: 18703e3 docs(log): record Phase 1 /api/suggest feature [no-log] -->
