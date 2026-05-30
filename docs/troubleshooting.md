@@ -37,3 +37,12 @@ Concrete only. Numbers, file paths, commit hashes. No "lessons learned" essays.
 - **Commit**: 9272b69
 - **Pattern**: Under strict concurrency, move non-Sendable AVFoundation types into a background `Task` via an `@unchecked Sendable` box, and build reusable SwiftUI labels as `View` structs (not `@MainActor` methods) so nonisolated closures can construct them.
 <!-- skipped: 7cfb48e docs(log): record live-camera feature + first troubleshooting entry [no-log] -->
+<!-- skipped: 7fe9703 chore(ios): configurable backend base URL for device testing [no-log] -->
+
+## Gemini 2.5 Flash: empty / truncated structured output
+
+- **Symptom**: `POST /api/suggest` returned `502`: `gemini: no JSON object found in response`. (`/api/translate` worked; latency ~2.3s.)
+- **Cause**: Gemini 2.5 Flash has *thinking* on by default, and thinking tokens count against `maxOutputTokens`. With `maxOutputTokens: 400`, thinking consumed the budget and left no room for the JSON body — translate's tiny output squeaked through, suggest's longer JSON did not.
+- **Fix**: in `backend/src/providers/gemini.ts` set `config.thinkingConfig = { thinkingBudget: 0 }` (disable thinking — simple, latency-sensitive tasks) and raise `maxOutputTokens` to 1024. Translate latency dropped 2316ms → 670ms; suggest returns valid JSON.
+- **Commit**: de3ab15
+- **Pattern**: On Gemini 2.5+ Flash, thinking is on by default and eats `maxOutputTokens`; for short / structured / latency-sensitive calls, set `thinkingBudget: 0` and leave the output enough token headroom.
