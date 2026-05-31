@@ -2,39 +2,30 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
-// Look — 핵심 기능: 사물을 보면 개별로 인식해서 영어 이름 + 한국어 뜻 (영어 단어 학습).
-// 카메라/사진 → 다운스케일 → /api/label(Gemini 비전) → 라벨 카드.
+// Look — 핵심 기능: 사물을 보면 개별로 인식해서 그 위치에 영어 단어를 박는다 (AR식 라벨).
+// 시야 안 가리게 작은 칩 + 토글(eye)로 끄고켜기. 카메라/사진 → 다운스케일 → /api/label.
 struct ObjectView: View {
     @State private var pickedItem: PhotosPickerItem?
     @State private var showCamera = false
-    @State private var previewImage: Image?
+    @State private var capturedImage: UIImage?
     @State private var objects: [LabeledObject] = []
     @State private var status: ScanStatus = .idle
+    @State private var showLabels = true
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Look — name things in English")
-                        .font(.system(size: 19, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.white)
-
+                    header
                     sourceRow
 
-                    if let previewImage {
-                        previewImage
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 150)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    if let capturedImage {
+                        LabeledImageView(image: capturedImage, objects: objects, showLabels: showLabels)
                     }
 
                     statusLine
-
-                    ForEach(Array(objects.enumerated()), id: \.offset) { _, object in
-                        ObjectCard(object: object)
-                    }
+                    if !objects.isEmpty { wordList }
 
                     Spacer(minLength: 0)
                 }
@@ -52,6 +43,22 @@ struct ObjectView: View {
                 },
                 onCancel: { showCamera = false },
             )
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Text("Look")
+                .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white)
+            Spacer()
+            // 단어 표시 켜고끄기 — 시야 비교용.
+            Button { showLabels.toggle() } label: {
+                Image(systemName: showLabels ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(objects.isEmpty ? .gray : .green)
+            }
+            .disabled(objects.isEmpty)
         }
     }
 
@@ -74,19 +81,29 @@ struct ObjectView: View {
         case .loading(let label):
             HStack(spacing: 8) {
                 ProgressView().tint(.green)
-                Text(label)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.green.opacity(0.7))
+                Text(label).font(.system(size: 11, design: .monospaced)).foregroundStyle(.green.opacity(0.7))
             }
         case .success(let meta):
-            Text(meta)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.green.opacity(0.6))
+            Text(meta).font(.system(size: 10, design: .monospaced)).foregroundStyle(.green.opacity(0.6))
         case .failure(let message):
-            Text(message)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.red.opacity(0.85))
-                .lineLimit(3)
+            Text(message).font(.system(size: 11, design: .monospaced)).foregroundStyle(.red.opacity(0.85)).lineLimit(3)
+        }
+    }
+
+    // 사진 아래 단어 요약 (전체 단어 읽기용).
+    private var wordList: some View {
+        VStack(spacing: 6) {
+            ForEach(Array(objects.enumerated()), id: \.offset) { _, object in
+                HStack(spacing: 10) {
+                    Text(object.english)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(object.korean)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.green.opacity(0.75))
+                    Spacer()
+                }
+            }
         }
     }
 
@@ -110,9 +127,7 @@ struct ObjectView: View {
     @MainActor
     private func process(_ data: Data) async {
         reset()
-        if let uiImage = UIImage(data: data) {
-            previewImage = Image(uiImage: uiImage)
-        }
+        capturedImage = UIImage(data: data)
         status = .loading("looking…")
         do {
             let jpeg = downscaledJPEG(data)
@@ -127,40 +142,60 @@ struct ObjectView: View {
     }
 
     private func reset() {
-        previewImage = nil
+        capturedImage = nil
         objects = []
     }
 }
 
-// 단어 카드: 영어(큼) + 한국어 뜻(작게).
-struct ObjectCard: View {
-    let object: LabeledObject
+// 사진 + 각 물체 위치에 단어 칩. aspectRatio로 컨테이너를 이미지에 맞춰 박스 좌표를 직접 매핑.
+struct LabeledImageView: View {
+    let image: UIImage
+    let objects: [LabeledObject]
+    let showLabels: Bool
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(object.english)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                if !object.korean.isEmpty {
-                    Text(object.korean)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.green.opacity(0.8))
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width, height: geo.size.height)
+
+                if showLabels {
+                    ForEach(Array(objects.enumerated()), id: \.offset) { _, object in
+                        if let box = object.box {
+                            LabelChip(text: object.english)
+                                .position(
+                                    x: min(geo.size.width - 30, max(30, (box.x + box.width / 2) * geo.size.width)),
+                                    y: max(12, box.y * geo.size.height),
+                                )
+                        }
+                    }
                 }
             }
-            Spacer()
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.06))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(0.25), lineWidth: 1))
-        )
+        .aspectRatio(image.size.width / max(image.size.height, 1), contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: 380)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// 시야 안 가리는 작은 단어 칩 (물체 위에 얹힘).
+struct LabelChip: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.green.opacity(0.92)))
+            .fixedSize()
     }
 }
 
 // 업로드 전 다운스케일(긴 변 1024px, JPEG) — 업로드 속도 + 쿼터 절약.
-// UIKit이라 @MainActor (한 장 리사이즈라 부담 적음).
 @MainActor
 private func downscaledJPEG(_ data: Data, maxDimension: CGFloat = 1024, quality: CGFloat = 0.7) -> Data {
     guard let image = UIImage(data: data) else { return data }

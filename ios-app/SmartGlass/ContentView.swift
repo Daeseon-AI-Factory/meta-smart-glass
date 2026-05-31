@@ -4,6 +4,8 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
+            LiveView()
+                .tabItem { Label("Live", systemImage: "viewfinder") }
             ObjectView()
                 .tabItem { Label("Look", systemImage: "eye.fill") }
             ScanView()

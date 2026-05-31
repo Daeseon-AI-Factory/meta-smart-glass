@@ -9,8 +9,8 @@ enum CameraError: Error, Sendable {
 }
 
 // AVCaptureSession은 non-Sendable이지만 start/stopRunning은 스레드 세이프.
-// off-main 실행을 위해 @unchecked Sendable 박스로 경계만 넘긴다.
-private struct SessionBox: @unchecked Sendable {
+// off-main 실행을 위해 @unchecked Sendable 박스로 경계만 넘긴다. (Camera/Live 공유)
+struct SessionBox: @unchecked Sendable {
     let session: AVCaptureSession
 }
 

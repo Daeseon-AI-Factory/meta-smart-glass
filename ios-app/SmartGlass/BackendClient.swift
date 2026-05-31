@@ -26,9 +26,17 @@ struct TranslateResponse: Decodable, Sendable {
     let latencyMs: Int
 }
 
+struct BoundingBox: Decodable, Sendable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+}
+
 struct LabeledObject: Decodable, Sendable {
     let english: String
     let korean: String
+    let box: BoundingBox?
 }
 
 struct ObjectsResponse: Decodable, Sendable {

@@ -11,11 +11,14 @@
 		1AA96DFC9DD46422FD277143 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 654DFCBAFAA2F6E6F2001A88 /* Assets.xcassets */; };
 		20DA7BA08B1BFAAFEB55B239 /* ObjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EA6DA76FCB441B6ADC32F6 /* ObjectView.swift */; };
 		34FE9573A92946C283108B55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CE99DB91A162362C1BEF18 /* ContentView.swift */; };
+		8D7B73E3F563887392C36C72 /* LiveDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB439C84C19003456038C7 /* LiveDetection.swift */; };
 		90D4315656DB3EBE6BCD6B4A /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CAE348F4290BA8962E5353C /* BackendClient.swift */; };
 		920F81D7385CA1D5B7530815 /* SmartGlassApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C853BF20DAD77830C36F37EF /* SmartGlassApp.swift */; };
 		A75280A01B62D21C6B27A845 /* OCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FC2F80B3E08EF2C16F26041 /* OCR.swift */; };
 		B0C32CE8CD3CBDD9740E87FA /* CoachView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B9466A9F994C7B16C91788 /* CoachView.swift */; };
 		B549A182B426F1C7F73ECD0C /* Camera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 877703D43AA41DD47F31AAE3 /* Camera.swift */; };
+		C3356A5614D8A3858BBE69E5 /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F04347B64A212F0E24D4708A /* LiveView.swift */; };
+		CFD98018ADF3ACCB3FA858BB /* yolo11n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 9C16952DDB2CBB018DED3CB0 /* yolo11n.mlpackage */; };
 		E37D2C364628AD3833119DFE /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3126AD6D1D4B0B21A1C884A9 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -29,8 +32,11 @@
 		654DFCBAFAA2F6E6F2001A88 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		877703D43AA41DD47F31AAE3 /* Camera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Camera.swift; sourceTree = "<group>"; };
 		8D3068A83D32D095E550B32E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		97AB439C84C19003456038C7 /* LiveDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDetection.swift; sourceTree = "<group>"; };
+		9C16952DDB2CBB018DED3CB0 /* yolo11n.mlpackage */ = {isa = PBXFileReference; path = yolo11n.mlpackage; sourceTree = "<group>"; };
 		A5CE99DB91A162362C1BEF18 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C853BF20DAD77830C36F37EF /* SmartGlassApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartGlassApp.swift; sourceTree = "<group>"; };
+		F04347B64A212F0E24D4708A /* LiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveView.swift; sourceTree = "<group>"; };
 		F1EA6DA76FCB441B6ADC32F6 /* ObjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -68,10 +74,13 @@
 				26B9466A9F994C7B16C91788 /* CoachView.swift */,
 				A5CE99DB91A162362C1BEF18 /* ContentView.swift */,
 				8D3068A83D32D095E550B32E /* Info.plist */,
+				97AB439C84C19003456038C7 /* LiveDetection.swift */,
+				F04347B64A212F0E24D4708A /* LiveView.swift */,
 				F1EA6DA76FCB441B6ADC32F6 /* ObjectView.swift */,
 				0FC2F80B3E08EF2C16F26041 /* OCR.swift */,
 				50A317751F93ACF9C3B55009 /* ScanView.swift */,
 				C853BF20DAD77830C36F37EF /* SmartGlassApp.swift */,
+				9C16952DDB2CBB018DED3CB0 /* yolo11n.mlpackage */,
 				520E437AC4118FCDB359D134 /* Preview Content */,
 			);
 			path = SmartGlass;
@@ -153,10 +162,13 @@
 				B549A182B426F1C7F73ECD0C /* Camera.swift in Sources */,
 				B0C32CE8CD3CBDD9740E87FA /* CoachView.swift in Sources */,
 				34FE9573A92946C283108B55 /* ContentView.swift in Sources */,
+				8D7B73E3F563887392C36C72 /* LiveDetection.swift in Sources */,
+				C3356A5614D8A3858BBE69E5 /* LiveView.swift in Sources */,
 				A75280A01B62D21C6B27A845 /* OCR.swift in Sources */,
 				20DA7BA08B1BFAAFEB55B239 /* ObjectView.swift in Sources */,
 				0147D3428744F59D6F5962B0 /* ScanView.swift in Sources */,
 				920F81D7385CA1D5B7530815 /* SmartGlassApp.swift in Sources */,
+				CFD98018ADF3ACCB3FA858BB /* yolo11n.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
