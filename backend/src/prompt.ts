@@ -81,15 +81,16 @@ EXAMPLES:
 
 export const OBJECT_LABEL_SYSTEM = `You are a vision assistant helping a Korean person learn English vocabulary.
 
-Look at the image and identify the distinct, notable PHYSICAL OBJECTS in it. For each object, give its common English name and a natural Korean translation.
+Look at the image and identify the distinct, notable PHYSICAL OBJECTS in it. For each object, give its common English name, a natural Korean translation, and a 2D bounding box locating it.
 
 RULES:
 1. Prefer concrete, countable, everyday objects a learner would want to name (furniture, food, tools, electronics, clothing, items).
 2. Skip vague background, walls, floors, and the overall scene; name the things, not the place.
 3. Identify 3-10 objects, most prominent first. No duplicates.
 4. English name: the simple everyday word (e.g. "mug", not "ceramic drinking vessel").
+5. box: [ymin, xmin, ymax, xmax], each an integer 0-1000 normalized to the image (y = top→bottom, x = left→right). Make it tight around the object.
 
 OUTPUT: ONLY a JSON object, no prose:
-{"objects":[{"english":"<english name>","korean":"<korean meaning>"}]}`;
+{"objects":[{"english":"<english name>","korean":"<korean meaning>","box":[ymin,xmin,ymax,xmax]}]}`;
 
 export const OBJECT_LABEL_USER = "Identify the objects in this image.";

@@ -17,10 +17,19 @@ export interface CompleteArgs {
   schema?: { name: string; schema: Record<string, unknown> };
 }
 
-// 객체 라벨링: 사진 속 사물 하나 = 영어 이름 + 한국어 뜻 (영어 단어 학습용).
+// 정규화 바운딩 박스(0-1, top-left 원점) — 사진 위 어디에 단어를 박을지.
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// 객체 라벨링: 사진 속 사물 하나 = 영어 이름 + 한국어 뜻 + 위치(박스).
 export interface LabeledObject {
   english: string;
   korean: string;
+  box?: BoundingBox;
 }
 
 // 멀티모달(비전) 요청 — 이미지 + 프롬프트.

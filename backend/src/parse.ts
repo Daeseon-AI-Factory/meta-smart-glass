@@ -1,4 +1,4 @@
-import type { LabeledObject, Suggestion, Tone } from "./types";
+import type { BoundingBox, LabeledObject, Suggestion, Tone } from "./types";
 
 const TONES: readonly Tone[] = ["professional", "casual", "safe"];
 
@@ -43,9 +43,34 @@ export function parseObjects(raw: string): LabeledObject[] {
 
 function toLabeledObject(value: unknown): LabeledObject | null {
   if (typeof value !== "object" || value === null) return null;
-  const { english, korean } = value as { english?: unknown; korean?: unknown };
+  const { english, korean, box } = value as {
+    english?: unknown;
+    korean?: unknown;
+    box?: unknown;
+  };
   if (typeof english !== "string" || english.trim() === "") return null;
-  return { english: english.trim(), korean: typeof korean === "string" ? korean.trim() : "" };
+  return {
+    english: english.trim(),
+    korean: typeof korean === "string" ? korean.trim() : "",
+    box: toBox(box),
+  };
+}
+
+// Gemini box [ymin, xmin, ymax, xmax] (0-1000) → {x,y,width,height} 정규화 0-1.
+function toBox(value: unknown): BoundingBox | undefined {
+  if (!Array.isArray(value) || value.length !== 4) return undefined;
+  const nums = value.map(Number);
+  if (nums.some((n) => !Number.isFinite(n))) return undefined;
+  const [ymin, xmin, ymax, xmax] = nums as [number, number, number, number];
+  const width = Math.abs(xmax - xmin) / 1000;
+  const height = Math.abs(ymax - ymin) / 1000;
+  if (width <= 0 || height <= 0) return undefined;
+  return {
+    x: Math.min(xmin, xmax) / 1000,
+    y: Math.min(ymin, ymax) / 1000,
+    width,
+    height,
+  };
 }
 
 function extractJsonObject(raw: string): string {
