@@ -1,0 +1,55 @@
+---
+title: "What this product actually is: labeling vs learning, on-device vs cloud"
+date: "2026-05-31"
+project: "meta-smart-glass"
+kind: "business"
+visibility: "public"
+language: "en"
+summary: "Less code, more figuring-out. The decisions and the questions I kept asking myself while building object labeling — and why the answer is a hybrid, with the real moat being the learning experience, not the detection."
+tags: ["product", "strategy", "vision", "on-device", "decisions"]
+---
+
+This entry is the part the commit log was missing: not *what* I built, but *what I learned about the product* while building it. I kept hitting the same questions, so here they are with the answers, for my future self.
+
+## Two ways to "see" — and they're a trade-off
+
+There are two engines for "look at a thing, name it":
+
+- **Cloud (Gemini vision)** — send a photo, get rich labels for *any* object, ~2–3s, uses quota. Great for "what's this specific thing?". Can't run on live video.
+- **On-device (YOLO11 / CoreML)** — runs in the phone at ~60fps, free, offline, private. But it only knows the classes it was trained on (COCO = 80 everyday objects).
+
+So real-time labeling has to be on-device. The `Live` tab is 100% on-device — **zero requests, zero quota** (I worried about flooding Gemini; it doesn't touch it). The cloud (Gemini) only runs on the `Look`/`Scan`/`Coach` tabs, and only on a tap.
+
+## The 80-class wall — and what "heavier" really means
+
+The on-device model only labels ~80 things, so a lot of the room doesn't get tagged. Can we just add more classes? Two corrections I had to internalize:
+
+- **Class count is cheap.** Going 80 → 500 classes on the *same* model is barely slower — only the final output layer grows. What's actually "heavy" is the **model size** (nano → small → large backbone) and the **input resolution**. So more classes ≠ slow.
+- **You can't have all three.** *Any object* + *real-time* + *on-device*, all maxed, is physically impossible — pick two. Cloud gets you "any object" but not real-time; on-device gets you real-time but not "any object".
+
+And a reframe that made it click: **daily life objects are finite.** You bump into maybe a few hundred distinct things day to day; the truly common core is ~100–200. You don't need 1,200 classes or open-vocabulary — you need good coverage of *common* objects, and an escape hatch for the rest.
+
+## The answer: hybrid, so you give up nothing
+
+Split it by tool:
+
+- **Ambient (on-device, common objects, real-time)** — walk around, common words appear in view.
+- **Tap-to-identify (cloud, any object, on demand)** — point at the weird thing, tap, get it.
+
+Together you keep real-time *and* any-object *and* a battery that survives. That's how you don't give anything up — not by cramming everything into one model.
+
+## The real moat isn't the detection — it's the learning
+
+This is the one I have to keep reminding myself: **object labeling is a commodity.** Google Lens does it; Meta's own on-glasses AI does it. Competing on "recognizes more things" is a losing game.
+
+The differentiation is the *learning experience* — and the target user makes it obvious. The person who needs this **doesn't know English yet.** To them, a box that says `chair` is useless on its own. What's useful is `chair = 의자`, how to *say* it, and seeing it again later until it sticks. So the value lives in: English + Korean + pronunciation + a record of the words you've met + review. The detection is just the trigger.
+
+So the next investment is **not** more classes. It's the learning layer: tap a word to hear it (on-device TTS, free), save what you've seen, review it.
+
+## Phone-first, not glasses-first
+
+A surprise: this is genuinely usable on the phone, not just as a glasses prototype. Point-and-learn works without any headset, which means I can **ship and validate now** — no hardware purchase, no developer-preview gatekeeping. The glasses become an *ambient* upgrade layered on top, not a prerequisite.
+
+---
+
+*Logging note: earlier entries captured features (code). This one captures decisions and the questions behind them — that's the part that was too thin, and what I'll keep recording from here, not just commits.*
