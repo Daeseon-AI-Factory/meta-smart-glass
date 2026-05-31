@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BackendBaseURL</key>
-	<string>http://localhost:3001</string>
+	<string>http://Daeseons-MacBook-Pro.local:3001</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>

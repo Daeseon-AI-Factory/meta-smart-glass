@@ -26,6 +26,18 @@ struct TranslateResponse: Decodable, Sendable {
     let latencyMs: Int
 }
 
+struct LabeledObject: Decodable, Sendable {
+    let english: String
+    let korean: String
+}
+
+struct ObjectsResponse: Decodable, Sendable {
+    let objects: [LabeledObject]
+    let provider: String
+    let model: String
+    let latencyMs: Int
+}
+
 private struct ErrorBody: Decodable {
     let error: String
     let detail: String?
@@ -43,6 +55,11 @@ enum Backend {
 
     static func translation(text: String) async throws -> TranslateResponse {
         try await post("/api/translate", ["text": text])
+    }
+
+    // 다운스케일된 JPEG → base64 → 객체 라벨링.
+    static func labelObjects(jpegData: Data) async throws -> ObjectsResponse {
+        try await post("/api/label", ["image": jpegData.base64EncodedString(), "mimeType": "image/jpeg"])
     }
 
     private static func post<T: Decodable>(_ path: String, _ body: [String: String]) async throws -> T {

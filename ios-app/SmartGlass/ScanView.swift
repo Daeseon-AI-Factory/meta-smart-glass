@@ -167,7 +167,8 @@ struct ScanView: View {
 }
 
 // 소스 버튼 라벨. View 구조체로 분리해 nonisolated 클로저(PhotosPicker label)에서도 생성 가능.
-private struct SourceButtonLabel: View {
+// Scan/Look 양쪽에서 재사용하므로 internal.
+struct SourceButtonLabel: View {
     let title: String
     let systemImage: String
 

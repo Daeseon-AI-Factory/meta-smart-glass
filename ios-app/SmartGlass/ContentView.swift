@@ -4,10 +4,12 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            CoachView()
-                .tabItem { Label("Coach", systemImage: "bubble.left.and.text.bubble.right.fill") }
+            ObjectView()
+                .tabItem { Label("Look", systemImage: "eye.fill") }
             ScanView()
                 .tabItem { Label("Scan", systemImage: "camera.viewfinder") }
+            CoachView()
+                .tabItem { Label("Coach", systemImage: "bubble.left.and.text.bubble.right.fill") }
         }
         .tint(.green)
     }
