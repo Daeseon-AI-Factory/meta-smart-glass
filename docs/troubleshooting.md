@@ -46,3 +46,11 @@ Concrete only. Numbers, file paths, commit hashes. No "lessons learned" essays.
 - **Fix**: in `backend/src/providers/gemini.ts` set `config.thinkingConfig = { thinkingBudget: 0 }` (disable thinking — simple, latency-sensitive tasks) and raise `maxOutputTokens` to 1024. Translate latency dropped 2316ms → 670ms; suggest returns valid JSON.
 - **Commit**: de3ab15
 - **Pattern**: On Gemini 2.5+ Flash, thinking is on by default and eats `maxOutputTokens`; for short / structured / latency-sensitive calls, set `thinkingBudget: 0` and leave the output enough token headroom.
+<!-- skipped: bf8d049 docs(log): record Gemini provider + thinking-budget fix [no-log] -->
+
+## Real-device backend access: phone can't reach the Mac
+
+- **Symptom**: On a physical iPhone the app showed `could not connect to the server`, then after pointing at a LAN IP, the request hung on "translating…" for ~60s. The Mac itself timed out connecting to its own `ipconfig` IP.
+- **Cause**: three stacked issues — (1) `Bun.serve` bound to `localhost` only, so nothing answered on the LAN interface; (2) the iOS app used `localhost`, which on a phone is the phone itself; (3) the LAN IP was **hardcoded** into `Info.plist` and went stale every time the Mac's IP changed (hotspot 172.20.x → WiFi 192.168.x). macOS firewall was already off, ruling it out.
+- **Fix**: (1) `Bun.serve({ hostname: "0.0.0.0" })` to bind all interfaces; (2) `BackendClient` reads `BackendBaseURL` from Info.plist; (3) set it to the Mac's **`.local` mDNS hostname** (`Daeseons-MacBook-Pro.local`) instead of an IP — Bonjour resolves the current IP automatically, so it survives network changes (same WiFi; hotspot mDNS is flaky). Commits `7fe9703`, `abb0668`.
+- **Pattern**: For phone→Mac dev, bind `0.0.0.0`, never `localhost`; address the Mac by its `.local` hostname (not a hardcoded IP) so it doesn't break when the IP changes. Covered by ATS `NSAllowsLocalNetworking`.
