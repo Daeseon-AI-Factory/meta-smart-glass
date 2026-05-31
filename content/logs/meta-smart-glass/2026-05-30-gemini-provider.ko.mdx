@@ -1,0 +1,40 @@
+---
+title: "Gemini를 (무료) primary 프로바이더로 — 첫 실제 end-to-end 응답"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "무료 티어 Gemini 프로바이더를 추가해 suggest/translate가 드디어 실제 출력. 함정은 Gemini 2.5 Flash의 기본 thinking이 토큰 예산을 먹은 것."
+tags: ["gemini", "llm", "bun", "typescript", "backend"]
+---
+
+지금까지 백엔드는 배선만 됐지 실제 답을 낸 적이 없었다 — 유효 키가 없어서. OpenAI 결제 셋업 대신 검증 단계엔 무료 **Gemini** 티어가 합리적 선택 (카드 X, 빠름, 번역 강함; `docs/decisions.md`의 "검증 후 지출"과 일치).
+
+## 들어간 것 (커밋 `de3ab15`)
+
+`providers/gemini.ts`는 `@google/genai` + `gemini-2.5-flash`. 이미 프로바이더를 `complete(args)` 하나로 일반화해놔서, Gemini 끼우기는 = 파일 하나 + 오케스트레이터 레지스트리에 항목 하나(OpenAI/Anthropic **앞에** 둬서 무료를 먼저 시도). `runWithFallback`이 "설정된 프로바이더 순서대로 시도"를 이미 처리.
+
+모델명은 추측 대신 **네 키로 라이브 API에 직접 조회**해 확인: `gemini-2.5-flash`, `gemini-3.5-flash`, `gemini-flash-latest` 등. 무료 티어 안정성으로 `gemini-2.5-flash` 선택.
+
+## 함정: thinking이 출력 예산을 먹음
+
+첫 라이브 테스트: `/api/translate`는 됐는데 `/api/suggest`가 `502: gemini: no JSON object found in response`, translate는 ~2.3s.
+
+원인: **Gemini 2.5 Flash는 "thinking"이 기본 ON, thinking 토큰이 `maxOutputTokens`에 포함됨.** `maxOutputTokens: 400`이라 thinking이 예산을 다 먹어 — translate의 짧은 출력은 통과, suggest의 긴 JSON은 잘려 빈 응답. (`docs/troubleshooting.md`에 기록.)
+
+수정: `thinkingConfig: { thinkingBudget: 0 }`(thinking 끔 — 단순·저지연 작업이고 제품 목표가 1초 이하) + `maxOutputTokens: 1024`.
+
+## 실제 결과 (라이브 검증, 무료 Gemini 키)
+
+```
+/api/translate  "Authorized personnel only"  →  "관계자 외 출입금지"        670ms
+/api/suggest    "Want to grab lunch?"         →  제안 3개                   1096ms
+                (casual / professional / safe)
+```
+
+thinking 끄니 translate 지연 2316ms → 670ms. 두 엔드포인트 다 실제로 잘 형성된 출력. `tsc` 클린, `bun test` 9/9.
+
+처음으로 이게 진짜 *답을 한다*. 시뮬레이터는 바로 됨(sim → `localhost` → Mac 백엔드); 폰은 백엔드를 Mac의 LAN/ngrok URL로 가리켜야 함.
+
+**커밋:** `de3ab15611a3622931ec74a3e9cb3541609ed21c`

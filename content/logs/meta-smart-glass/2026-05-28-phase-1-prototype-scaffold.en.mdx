@@ -1,0 +1,46 @@
+---
+title: "Phase 1 prototype scaffold: Bun /health backend + SwiftUI mock glass HUD"
+date: "2026-05-28"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "First real scaffold — a Bun backend exposing only /health, and a SwiftUI app that polls it and renders a mock glass HUD. LLM/STT/Vision and the Meta SDK are scaffolded as plans, not yet wired."
+tags: ["bun", "typescript", "swiftui", "ios", "scaffold", "prototype"]
+---
+
+Commit `b2e6721` (2026-05-28) — 27 files, +1744 −2. This is the first commit with real code. It's a thin end-to-end skeleton, deliberately scoped to "is the loop alive?" rather than any feature.
+
+## Backend — Bun, one route
+
+`backend/src/index.ts` runs `Bun.serve` with a single route:
+
+- `GET /health` → `{ status: "ok", service: "smart-glass-backend", timestamp }`
+- Everything else → `404 Not Found`
+- Port from `process.env.PORT ?? 3001`
+
+`package.json` scripts: `dev` = `bun --watch src/index.ts`, `start` = `bun src/index.ts`. Created via `bun init` (Bun 1.3.14). `backend/.env.example` scaffolds `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `PORT` — but no code reads them yet, and no OpenAI/Anthropic SDK is installed.
+
+## iOS — SwiftUI health poller + mock HUD
+
+`SmartGlassApp.swift` (`@main`) → `ContentView`. `ContentView` calls `fetchHealth()` in a `.task`: an async `URLSession` GET to `http://localhost:3001/health`, decoded into `HealthResponse`. On success it shows the uppercased status; on failure, `OFFLINE`.
+
+`GlassDisplayView` is a 280×280 mock "glass display" overlay — a green `wifi` SF Symbol when the backend is reachable, red `wifi.slash` when not, monospaced text. So the whole app today is: **is the backend up? render that as a glasses-style HUD.**
+
+Project is generated with XcodeGen (`ios-app/project.yml`): bundle `com.smartglass.app`, iOS 17.0 deployment, Swift 6.0, `SWIFT_STRICT_CONCURRENCY: complete`.
+
+## Prompts & docs (drafts)
+
+`prompts/` has `english-coach.md` (System Prompt v0.1 — a coach for a Korean working-holiday participant in Toronto, suggesting 2–3 short responses in business/casual tone), plus `translator.md` and `vision-labeler.md`. These are prompt drafts, not yet called from code. `docs/architecture.md`, `decisions.md`, and `use-cases.md` describe the intended system — the plan, not the current build.
+
+## What is explicitly NOT built yet
+
+To keep this honest:
+
+- No `/api/suggest`, no LLM / STT / Vision calls. The backend exposes only `/health`.
+- iOS has no Meta Wearables SDK, no `Session.swift`, no camera/mic capture.
+- The full pipeline in `docs/architecture.md` (glasses → phone → backend → LLM) is the target, not what runs.
+
+Note: `CLAUDE.md` lists `backend/src/api/llm.ts` and `ios-app/SmartGlass/Core/Session.swift` under "Important Files" — these don't exist yet; they're aspirational targets, not current files.
+
+**Commit:** `b2e672168356ba125be481e4c1eba627fab21968`

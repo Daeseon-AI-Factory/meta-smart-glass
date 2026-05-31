@@ -1,0 +1,46 @@
+---
+title: "Phase 1 프로토타입 스캐폴드: Bun /health 백엔드 + SwiftUI mock 글래스 HUD"
+date: "2026-05-28"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "첫 실제 스캐폴드 — /health만 노출하는 Bun 백엔드 + 그걸 폴링해서 mock 글래스 HUD로 그리는 SwiftUI 앱. LLM/STT/Vision과 Meta SDK는 계획으로만 잡혀 있고 아직 미배선."
+tags: ["bun", "typescript", "swiftui", "ios", "scaffold", "prototype"]
+---
+
+커밋 `b2e6721`(2026-05-28) — 27 files, +1744 −2. 실제 코드가 들어간 첫 커밋. 기능이 아니라 "루프가 살아있나?"만 확인하는 얇은 end-to-end 뼈대로 의도적으로 범위를 잡았다.
+
+## 백엔드 — Bun, 라우트 하나
+
+`backend/src/index.ts`는 `Bun.serve`에 라우트 하나:
+
+- `GET /health` → `{ status: "ok", service: "smart-glass-backend", timestamp }`
+- 그 외 전부 → `404 Not Found`
+- 포트는 `process.env.PORT ?? 3001`
+
+`package.json` 스크립트: `dev` = `bun --watch src/index.ts`, `start` = `bun src/index.ts`. `bun init`(Bun 1.3.14)로 생성. `backend/.env.example`에 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `PORT` 자리만 잡아뒀고 — 아직 코드가 읽지 않으며 OpenAI/Anthropic SDK도 미설치.
+
+## iOS — SwiftUI health 폴러 + mock HUD
+
+`SmartGlassApp.swift`(`@main`) → `ContentView`. `ContentView`는 `.task`에서 `fetchHealth()` 호출: `http://localhost:3001/health`로 async `URLSession` GET, `HealthResponse`로 디코드. 성공 시 status 대문자로 표시, 실패 시 `OFFLINE`.
+
+`GlassDisplayView`는 280×280 mock "글래스 디스플레이" 오버레이 — 백엔드 연결되면 초록 `wifi` SF Symbol, 안 되면 빨강 `wifi.slash`, monospaced 텍스트. 즉 현재 앱 전체 = **백엔드 떠 있나? 그걸 글래스 스타일 HUD로 렌더**.
+
+프로젝트는 XcodeGen(`ios-app/project.yml`)으로 생성: 번들 `com.smartglass.app`, iOS 17.0, Swift 6.0, `SWIFT_STRICT_CONCURRENCY: complete`.
+
+## 프롬프트·docs (초안)
+
+`prompts/`에 `english-coach.md`(System Prompt v0.1 — 토론토 워홀 한국인용 코치, business/casual 톤으로 짧은 답변 2–3개 제안), `translator.md`, `vision-labeler.md`. 전부 프롬프트 초안이고 아직 코드에서 호출 안 함. `docs/architecture.md`, `decisions.md`, `use-cases.md`는 의도한 시스템을 기술 — 현재 빌드가 아니라 계획.
+
+## 아직 안 만든 것 (명시)
+
+정직하게:
+
+- `/api/suggest` 없음, LLM / STT / Vision 호출 없음. 백엔드는 `/health`만 노출.
+- iOS에 Meta Wearables SDK 없음, `Session.swift` 없음, 카메라/마이크 캡처 없음.
+- `docs/architecture.md`의 풀 파이프라인(글래스 → 폰 → 백엔드 → LLM)은 목표지 현재 동작이 아님.
+
+참고: `CLAUDE.md`의 "Important Files"에 `backend/src/api/llm.ts`와 `ios-app/SmartGlass/Core/Session.swift`가 적혀 있는데 — 아직 존재하지 않음. 현재 파일이 아니라 지향 타깃.
+
+**Commit:** `b2e672168356ba125be481e4c1eba627fab21968`

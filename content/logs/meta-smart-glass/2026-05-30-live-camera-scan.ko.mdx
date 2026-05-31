@@ -1,0 +1,40 @@
+---
+title: "Scan용 라이브 카메라 소스 — 그리고 Swift 6 strict concurrency 씨름"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "Scan의 두 번째 소스로 라이브 AVFoundation 카메라 추가(PhotosPicker와 병행), 같은 OCR→번역 파이프라인에 연결. 진짜 일은 AVFoundation을 Swift 6 strict concurrency에서 컴파일시키는 거였음."
+tags: ["swiftui", "ios", "avfoundation", "swift6", "concurrency", "camera"]
+---
+
+"이미지 소스 갈아끼우기" 계획의 다음 단계: `PhotosPicker → 폰 카메라 → (결국) 메타 글래스 피드`. 각각은 이미지 `Data`를 만드는 다른 방법일 뿐, Vision OCR → `/api/translate` → 표시 파이프라인은 동일.
+
+## 들어간 것 (커밋 `9272b69`)
+
+`Camera.swift`에 `CameraModel`(`AVCaptureSession` + 포토 아웃풋)과 `CameraCaptureView`(셔터 버튼 달린 라이브 프리뷰) 추가. 사진 캡처가 `Data`로 resolve되고, PhotosPicker가 쓰던 그 `process(data)`로 그대로 흐름. `ScanView`는 이제 소스 버튼 둘 — **Camera**(라이브) + **Photo**(피커) — 실기기·시뮬 양쪽 동작.
+
+## 진짜 작업: Swift 6 strict concurrency
+
+`SWIFT_STRICT_CONCURRENCY: complete`와 AVFoundation은 기본적으로 안 맞는다. 빌드가 두 번 실패:
+
+- `AVCaptureSession`이 **non-Sendable** → 블로킹 `startRunning()`을 main 밖에서 돌리려고 `Task.detached`에 캡처하면 data-race 에러.
+- 사진 캡처 델리게이트 콜백은 `nonisolated`(임의 큐)인데 `@MainActor` continuation을 resume해야 함.
+- `@MainActor` `View` *메서드*가 `some View`를 반환하는데, `PhotosPicker`의 nonisolated 라벨 클로저에서 호출 불가.
+
+수정 (`docs/troubleshooting.md`에 기록):
+- `@unchecked Sendable` `SessionBox`로 세션을 백그라운드 `Task`로 넘김; 델리게이트는 전부 `Sendable Result<Data, CameraError>`로 매핑한 뒤 `@MainActor`로 hop.
+- 공통 라벨을 `SourceButtonLabel: View` **구조체**로 — 메서드 호출이 아니라 생성 — nonisolated 클로저에서도 빌드 가능.
+
+그 후 `BUILD SUCCEEDED`, concurrency 경고 0.
+
+## 검증된 것 — 아닌 것
+
+- `xcodebuild` → **BUILD SUCCEEDED**(iphonesimulator), Swift 6 strict concurrency 클린.
+- iPhone 17 Pro 시뮬에서 스모크 런치(카메라 코드로 인한 런치 리그레션 0).
+- **미검증**: 카메라 자체 — 시뮬엔 카메라가 없어 라이브 캡처는 실기기(내 iPhone 16 Pro Max)에서만 동작. Photo 소스가 시뮬에서 OCR→번역 경로를 커버. 번역 출력은 여전히 유효 키 필요.
+
+이게 아키텍처를 정직하게 유지함: 카메라는 또 하나의 `Data` 소스일 뿐. 메타 글래스 경로가 열리면 MWDAT 카메라 피드가 똑같은 `process(data)`에 끼워짐 — 파이프라인 재작성 없음.
+
+**커밋:** `9272b6917d0519f9f00f8ac1d7c5f1f7d9cee17c`

@@ -1,0 +1,45 @@
+---
+title: "Phase 1 feature: /api/suggest end-to-end (GPT-4o-mini → Claude Haiku fallback)"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "The first real product feature — a backend English-coach suggestion endpoint with provider fallback, plus a SwiftUI client to drive it. Verified up to the API-key boundary."
+tags: ["bun", "typescript", "swiftui", "ios", "openai", "anthropic", "llm"]
+---
+
+The first feature that actually does the job: take what the other person said, return 2-3 natural English responses. This is the Phase 1 core ("영어 답변 제안") wired end to end.
+
+## Backend — `POST /api/suggest` (commit `6bd6ef7`)
+
+`backend/src/index.ts` now exposes a second route. The orchestration lives in `src/api/llm.ts` — the file `CLAUDE.md` had pointed at as an "Important File" but which didn't exist until now (doc/code drift resolved).
+
+- **Dual provider with fallback**: OpenAI `gpt-4o-mini` (primary) → Anthropic `claude-haiku-4-5` (fallback). Only providers with a configured key are attempted, in order; the first success wins.
+- **Structured output, three layers of defense**: both providers are asked for a strict JSON schema (`response_format` / `output_config`), the system prompt also spells out the exact JSON shape, and `src/parse.ts` tolerantly extracts + validates (normalizing unknown tones, dropping empty entries). Any one layer alone is enough.
+- **Prompt** (`src/prompt.ts`): the english-coach system prompt (from `prompts/english-coach.md` v0.1), marked `cache_control: ephemeral`. Note: Haiku 4.5's minimum cacheable prefix is 4096 tokens and the current prompt is far shorter, so caching is a no-op today — it activates automatically once the prompt grows (personalization, glossary).
+- **Keys stay server-side**: Bun auto-loads `.env`; clients never see a key.
+
+Contract:
+
+```json
+POST /api/suggest  { "text": "...", "context"?: "..." }
+→ { "suggestions": [{ "text": "...", "tone": "professional|casual|safe" }], "provider", "model", "latencyMs" }
+```
+
+## iOS — suggestion UI (commit `98cc004`)
+
+`ContentView.swift` went from a health-poller HUD to the real thing: a text field → async `POST /api/suggest` → tone-colored suggestion cards in the glass-HUD style. Swift 6 strict concurrency (`complete`), async/await throughout.
+
+One required change: the app talks to `http://localhost:3001` (cleartext), which iOS App Transport Security blocks by default. `project.yml` now generates an `Info.plist` with `NSAppTransportSecurity.NSAllowsLocalNetworking = true` — the minimal, App-Store-safe exception for loopback.
+
+## What's verified — and what isn't
+
+Verified:
+- Backend typechecks under strict TS; `bun test` is 7/7 (the parser).
+- `/health` and `/api/suggest` are live-wired: a request flows through validation → provider selection → API call → error mapping. With no valid credentials it fast-fails in ~0.22s with a structured 502.
+- iOS: `xcodebuild` → **BUILD SUCCEEDED** on the simulator SDK.
+
+Not yet verified (honest): the **provider success path**. Live testing surfaced that `OPENAI_API_KEY` is unset and the `ANTHROPIC_API_KEY` in `.env` returns `401 invalid x-api-key`. So no real suggestion has come back yet — that's gated on valid keys, which are mine to add. The three-layer parsing defense is what makes shipping the code ahead of that comfortable.
+
+**Commits:** backend `6bd6ef7a39feca75678def489192a9a93d62767e`, iOS `98cc004da089ddba9a74d1025b80f3b312554fb5`.

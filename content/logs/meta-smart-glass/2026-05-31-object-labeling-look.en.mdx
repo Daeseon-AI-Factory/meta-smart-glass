@@ -1,0 +1,32 @@
+---
+title: "Look: name the objects you see in English — running on a real iPhone"
+date: "2026-05-31"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "Pivoted from text translation to the actual differentiated feature — point at a scene, get each object's English name + Korean meaning. Built on Gemini vision, working end-to-end on a physical iPhone."
+tags: ["gemini", "vision", "swiftui", "ios", "vocabulary", "feature"]
+---
+
+Translating menu text turned out to be the wrong feature — "anyone can do that" (Google Translate). The thing I actually want is **vocabulary by looking**: glance at a desk and see `mug 머그컵`, `laptop 노트북`, `window 창문`. That's the Phase 2 "물체 영어 라벨링" use case, and it's what makes this a *learning* tool rather than a lookup.
+
+## What landed
+
+- **Backend `POST /api/label`** (commit `abb0668`): an image (base64) → Gemini 2.5 Flash vision → distinct objects, each with an English name and Korean meaning. `gemini.ts` got a `completeVision()` (image + text parts), plus `parseObjects`. Vision is Gemini-only for now (multimodal + free).
+- **iOS "Look" tab** (commit `c65d225`): camera or photo → downscale to 1024px JPEG → `/api/label` → a list of `{english, korean}` cards. It's the new default tab — the others (Scan/translate, Coach/suggest) stay.
+- The same camera/photo source from the Scan feature is reused; only the backend call differs.
+
+## Why it "just works"
+
+Honestly, most of the magic is the model. Gemini understands the scene and names things — we trained nothing. Our part is the thin pipeline (capture → downscale → send) and a focused prompt ("name concrete objects, English + Korean, skip the background"). A few hundred lines + a good prompt = a real vision feature. That's the leverage of building on a frontier model.
+
+## Getting it onto the phone
+
+The slog was network access, not the feature (full write-up in `docs/troubleshooting.md`): `Bun.serve` had to bind `0.0.0.0`, the app had to stop using `localhost`, and the **hardcoded LAN IP kept going stale** as the Mac hopped networks (hotspot → WiFi). Fixed for good by addressing the Mac via its `.local` mDNS hostname instead of an IP.
+
+## Honest product note
+
+The labeling *tech* is commodity — Google Lens, Apple Visual Look Up, and Meta's own on-glasses AI already do "what am I looking at." The phone version here is a **validation prototype, not the product**. The bet is the *form factor* (glasses = ambient, always-in-view, hands-free immersion rather than a hold-up-your-phone lookup) and the *learning design* (tracking words you've seen, spaced repetition, your weak spots). The demo being cool ≠ daily value — that's still the thing to validate.
+
+**Commits:** backend `abb0668f8d12596148656a966750a13bfc4b3c27`, iOS `c65d225fb006b74b28bc7103b5528e91b3255a51`.

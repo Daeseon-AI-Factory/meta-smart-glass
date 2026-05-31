@@ -1,0 +1,40 @@
+---
+title: "Live camera source for Scan — and wrestling Swift 6 strict concurrency"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "Added a live AVFoundation camera as a second Scan source (alongside PhotosPicker), feeding the same OCR→translate pipeline. The interesting part was getting AVFoundation to compile under Swift 6 strict concurrency."
+tags: ["swiftui", "ios", "avfoundation", "swift6", "concurrency", "camera"]
+---
+
+The next step in the "swap the image source" plan: `PhotosPicker → phone camera → (eventually) Meta glasses feed`. Each is just a different way to produce image `Data`; the Vision OCR → `/api/translate` → display pipeline is identical regardless.
+
+## What landed (commit `9272b69`)
+
+`Camera.swift` adds `CameraModel` (an `AVCaptureSession` + photo output) and `CameraCaptureView` (a live preview with a shutter button). Capturing a photo resolves to `Data`, which flows into the same `process(data)` that PhotosPicker already used. `ScanView` now shows two source buttons — **Camera** (live) and **Photo** (picker) — so it works both on a real device and in the simulator.
+
+## The actual work: Swift 6 strict concurrency
+
+`SWIFT_STRICT_CONCURRENCY: complete` and AVFoundation don't get along by default. The build failed twice:
+
+- `AVCaptureSession` is **non-Sendable**, so capturing it into a `Task.detached` (to run the blocking `startRunning()` off the main actor) is a data-race error.
+- The capture-photo delegate callback is `nonisolated` (arbitrary queue), but it needs to resume a `@MainActor` continuation.
+- A `@MainActor` `View` *method* returning `some View` couldn't be called from `PhotosPicker`'s nonisolated label closure.
+
+Fixes (recorded in `docs/troubleshooting.md`):
+- An `@unchecked Sendable` `SessionBox` carries the session across to the background `Task`; the delegate maps everything to a `Sendable Result<Data, CameraError>` before hopping back to `@MainActor`.
+- The shared label became a `SourceButtonLabel: View` **struct** — constructed, not a MainActor method call — so nonisolated closures can build it.
+
+After those, `BUILD SUCCEEDED` with zero concurrency warnings.
+
+## Verified — and not
+
+- `xcodebuild` → **BUILD SUCCEEDED** (iphonesimulator), Swift 6 strict concurrency clean.
+- App smoke-launched in the iPhone 17 Pro simulator (no startup regression from the camera code).
+- **Not verified**: the camera itself — the simulator has no camera, so live capture only runs on a real device (my iPhone 16 Pro Max). The Photo source covers the OCR→translate path in the simulator. Translation output still needs valid API keys.
+
+This keeps the architecture honest: the camera is just another `Data` source. When the Meta glasses path opens up, the MWDAT camera feed slots into the exact same `process(data)` — no pipeline rewrite.
+
+**Commit:** `9272b6917d0519f9f00f8ac1d7c5f1f7d9cee17c`

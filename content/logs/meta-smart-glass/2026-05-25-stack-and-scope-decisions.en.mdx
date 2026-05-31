@@ -1,0 +1,49 @@
+---
+title: "Stack & scope decisions: Swift-native, iOS-first, cloud-LLM-first"
+date: "2026-05-25"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "Locked the foundational stack and scope for the smart-glass English assistant — Swift-native iOS, cloud LLM before local, and a Mock Device Kit instead of buying hardware."
+tags: ["architecture", "swift", "ios", "llm", "decisions"]
+---
+
+Before writing any code I pinned down the decisions that are expensive to reverse later. All of this is recorded in `docs/decisions.md`; this entry is the narrative version.
+
+## Swift-native (not Flutter / React Native / Web)
+
+Chose **Swift + the Meta Wearables Device Access Toolkit**, iOS-native.
+
+- Real-time BLE + camera is most stable on native.
+- Meta ships first-class Swift Package support; the Flutter wrapper (`meta_wearables`) is community-maintained (v0.2.1, single maintainer).
+- Native is the industry norm for vision/AR (HoloLens, Vision Pro).
+- AI coding tools have rich Swift training data.
+
+**Trade-off accepted:** Android needs a separate Kotlin build, deferred to Year 2.
+
+## iOS-first (not Android, not cross-platform)
+
+- Solo-dev time constraint.
+- Ray-Ban Display's core users skew iPhone (premium segment), and I already own an iPhone 16 Pro Max — immediate on-device testing.
+- Android revisited in Year 2, after validation.
+
+## Cloud LLM first (not local Ollama)
+
+Start on OpenAI / Anthropic APIs rather than local models on the M2 Max.
+
+- Setup is ~5 minutes vs 1–2 hours.
+- Validation phase needs fast iteration over cost optimization.
+- The M2 Max (and a possible Mac Mini M4 Pro home server) stays a backup for later latency/cost tuning.
+
+## Hardware: Mock Device Kit, no glasses purchase yet
+
+Ray-Ban Display ($799) plus a US trip to buy = roughly $1,200–1,700 CAD. Too large an investment before the use case is proven. Meta's Mock Device Kit lets me simulate the glasses, so the purchase decision waits until 1–2 months of prototype use shows real daily value.
+
+## Repo: monorepo
+
+Single repo for a solo dev; core/adapters split keeps it portable while staying managed in one place.
+
+---
+
+*Decision date per `docs/decisions.md` (dated 2026-05-25). These docs entered git on 2026-05-28 in commit `b2e6721`.*

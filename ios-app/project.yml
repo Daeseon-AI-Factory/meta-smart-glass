@@ -1,0 +1,47 @@
+name: SmartGlass
+
+options:
+  bundleIdPrefix: com.smartglass
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+targets:
+  SmartGlass:
+    type: application
+    platform: iOS
+    sources:
+      - SmartGlass
+    info:
+      path: SmartGlass/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # 개발용: 로컬 Bun 백엔드(http://localhost:3001)는 평문 HTTP라 ATS 예외 필요.
+        # NSAllowsLocalNetworking이 loopback/localhost 평문 로드를 허용 (App Store 안전).
+        NSAppTransportSecurity:
+          # 개발용: 실기기→Mac LAN(평문 HTTP) 허용. 출시 전 제거/좁히기.
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        NSCameraUsageDescription: "Scan menus and signs in front of you to translate them to Korean."
+        # .local 호스트명 → IP 바뀌어도 안 깨짐(mDNS). 폰·Mac 같은 WiFi면 됨(핫스팟 mDNS는 불안정).
+        BackendBaseURL: "http://Daeseons-MacBook-Pro.local:3001"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.daeseon.smartglass
+        # 실기기 서명 (Xcode에서 설정한 값) — 재생성해도 보존되게 박아둠.
+        DEVELOPMENT_TEAM: Z2BGA7G287
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        DEVELOPMENT_ASSET_PATHS: '"SmartGlass/Preview Content"'

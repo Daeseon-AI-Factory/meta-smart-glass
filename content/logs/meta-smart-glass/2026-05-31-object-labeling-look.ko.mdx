@@ -1,0 +1,32 @@
+---
+title: "Look: 보이는 사물을 영어로 — 실기기 아이폰에서 작동"
+date: "2026-05-31"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "텍스트 번역에서 진짜 차별 기능으로 피벗 — 장면을 보면 각 사물의 영어 이름 + 한국어 뜻. Gemini 비전으로, 실기기 아이폰에서 end-to-end 작동."
+tags: ["gemini", "vision", "swiftui", "ios", "vocabulary", "feature"]
+---
+
+메뉴 텍스트 번역은 틀린 기능이었다 — "누가 못해"(구글 번역). 내가 진짜 원하는 건 **보면서 단어 익히기**: 책상 보면 `mug 머그컵`, `laptop 노트북`, `window 창문`. 이게 Phase 2 "물체 영어 라벨링" use case고, 이게 *학습 도구*냐 *lookup 도구*냐를 가른다.
+
+## 들어간 것
+
+- **백엔드 `POST /api/label`** (커밋 `abb0668`): 이미지(base64) → Gemini 2.5 Flash 비전 → 사물별 영어 이름 + 한국어 뜻. `gemini.ts`에 `completeVision()`(이미지+텍스트 파트) + `parseObjects`. 비전은 현재 Gemini 전용(멀티모달 + 무료).
+- **iOS "Look" 탭** (커밋 `c65d225`): 카메라/사진 → 1024px JPEG로 다운스케일 → `/api/label` → `{english, korean}` 카드 리스트. 새 기본 탭 (Scan/번역, Coach/제안은 유지).
+- Scan에서 쓰던 카메라/사진 소스 그대로 재사용, 백엔드 호출만 다름.
+
+## 왜 "그냥 잘 되나"
+
+솔직히 마법의 대부분은 모델이다. Gemini가 장면을 이해하고 이름을 붙임 — 우리가 학습시킨 거 0. 우리 몫은 얇은 파이프라인(찍고→줄이고→보내고)과 집중된 프롬프트("배경 말고 사물만, 영어+한국어"). 몇백 줄 + 좋은 프롬프트 = 비전 기능 하나. 프런티어 모델 위에 짓는 레버리지.
+
+## 폰에 올리기
+
+고생은 기능이 아니라 네트워크 접근이었다(전체는 `docs/troubleshooting.md`): `Bun.serve`를 `0.0.0.0`로 바인딩, 앱이 `localhost` 안 쓰게, 그리고 **하드코딩한 LAN IP가 Mac이 망 바꿀 때마다(핫스팟→WiFi) stale**. Mac을 IP 대신 `.local` mDNS 호스트명으로 가리켜 영구 해결.
+
+## 정직한 제품 노트
+
+라벨링 *기술*은 commodity — Google Lens, Apple Visual Look Up, Meta 자체 글래스 AI가 이미 "이거 뭐야"를 함. 여기 폰 버전은 **검증용 프로토타입이지 제품이 아님.** 베팅은 *폼팩터*(글래스 = ambient·상시 시야·핸즈프리 몰입, 폰 들어올리는 lookup 아님)와 *학습 설계*(본 단어 추적, spaced repetition, 약점). 데모가 멋진 거 ≠ 매일 가치 — 그게 아직 검증할 것.
+
+**커밋:** 백엔드 `abb0668f8d12596148656a966750a13bfc4b3c27`, iOS `c65d225fb006b74b28bc7103b5528e91b3255a51`.

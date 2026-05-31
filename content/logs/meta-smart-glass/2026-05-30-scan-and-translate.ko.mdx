@@ -1,0 +1,46 @@
+---
+title: "Scan & Translate: Vision OCR → /api/translate, 그리고 메타 글래스 현실 점검"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "ko"
+summary: "두 번째 Phase 1 기능 — 메뉴/표지판 온디바이스 OCR → 한국어 번역 — 그리고 메타 글래스가 이걸 실제로 돌릴 수 있는지 알아본 결과."
+tags: ["bun", "typescript", "swiftui", "ios", "vision", "ocr", "meta-glasses"]
+---
+
+제품의 카메라 절반: 영어 메뉴/표지판을 보면 한국어로. 백엔드 뇌 + iOS 파이프라인을 만들되, 진짜 글래스 피드가 나중에 끼워지도록 소스 비의존적으로.
+
+## 백엔드 — `POST /api/translate` (커밋 `9f3be50`)
+
+OCR 텍스트를 받아 짧은 한국어 번역을 돌려주는 두 번째 라우트 (translator 프롬프트, `prompts/translator.md` v0.1 — 순수 한국어, 낯선 항목엔 괄호 컨텍스트).
+
+suggest 프로바이더 코드를 복붙하는 대신 일반화: 각 프로바이더가 이제 `complete()` 하나(구조화 JSON *또는* 평문)를 노출하고, `api/llm.ts`에 `runWithFallback()` 하나로 `getSuggestions`/`getTranslation`이 같이 탄다 (OpenAI → Anthropic, 키 게이트, parse 실패도 fallback). 결과: 코드 줄고 fallback 로직 한 곳.
+
+## iOS — Scan 탭 (커밋 `2e951ca`)
+
+`ContentView`가 이제 `TabView`: **Coach**(제안 기능) + **Scan**. 네트워킹/모델은 `BackendClient`로, OCR은 `OCR.swift`로 분리.
+
+스캔 흐름: `PhotosPicker` → **Apple Vision** 온디바이스 OCR(`VNRecognizeTextRequest`) → `POST /api/translate` → 글래스 HUD 카드에 번역. 추출된 *텍스트*만 폰을 떠나고 이미지는 로컬에 남음(프라이버시 우선, `docs/architecture.md`와 일치). OCR은 `Data`(Sendable)를 `nonisolated` 함수로 넘겨 main 밖에서 실행 — Swift 6 strict concurrency에서 깔끔.
+
+이미지 소스는 의도적으로 교체 가능. 오늘은 `PhotosPicker`(시뮬에서 동작, 카메라 권한 불필요). 다음엔 폰 카메라, 그 다음 메타 글래스 카메라 피드 — 어느 쪽이든 Vision → 번역 → 표시 파이프라인은 동일.
+
+## 왜 이 모양인가 — 메타 글래스 현실 점검 (2026-05, developer preview 기준)
+
+카메라 경로를 확정하기 전에 메타 Wearables Device Access Toolkit이 지금 실제로 뭘 할 수 있는지 확인했고, 이 기능 모양을 결정한 발견들:
+
+- **네이티브 iOS 앱이 이제 Ray-Ban Display HUD에 UI(텍스트/이미지)를 띄울 수 있음** — 2026-05 "build for display glasses" 롤아웃에서 디스플레이 컴포넌트 추가. 앱은 *폰*에서 돌고, 글래스는 카메라 입력 + 디스플레이 출력. 이 프로젝트 아키텍처와 정확히 일치.
+- **카메라 경로는 글래스 안 사도 테스트 가능** — Mock Device Kit이 페어링된 Ray-Ban, 카메라 피드(폰 카메라 or h265 비디오), 사진 캡처, 착용 상태, 템플 터치를 시뮬. 즉 OCR→번역 루프는 무료로 검증 가능, *디스플레이* 출력만 실기기 Ray-Ban Display가 필요할 듯(Mock Kit은 카메라 중심).
+- **아직 출시 불가** — developer preview 동안 퍼블리시 비활성, 테스터 공유만. 일반 배포는 2026 GA 예정.
+
+그래서: 카메라→번역 파이프라인은 지금 만들고(목테스트 가능), $799 Ray-Ban Display 구매는 디스플레이 경험을 느껴볼 가치가 생길 때까지 미룬다 — `docs/decisions.md`의 "검증 후 구매"와 정확히 맞음.
+
+## 검증된 것 — 아닌 것
+
+- 백엔드: `tsc` strict 클린; `bun test` 9/9; `/api/suggest`(회귀) + `/api/translate` 둘 다 라이브 배선(유효 키 없으면 구조화 502).
+- iOS: `xcodebuild` → **BUILD SUCCEEDED**, Swift 6 concurrency 경고 0.
+- 미검증: 실제 번역 왕복(여전히 유효 키에 막힘 — `OPENAI_API_KEY` 미설정, `ANTHROPIC_API_KEY` 401), 글래스 디스플레이 경로(developer preview 등록 + 실기기 Ray-Ban Display 필요). 온디바이스 Vision OCR 자체는 오프라인으로 돌고 키 갭과 무관.
+
+**커밋:** 백엔드 `9f3be50d72ac4227adbaa31a3e1907feb95e3f05`, iOS `2e951ca58cb31f9282e0f230c83cac8ca5c8191c`.
+
+*위 메타 플랫폼 사실은 메타 개발자 문서/발표(2026-05) 기반이며 developer preview라 변경될 수 있음.*

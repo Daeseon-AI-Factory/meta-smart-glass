@@ -1,0 +1,40 @@
+---
+title: "Gemini as the (free) primary provider — first real end-to-end responses"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "Added a Gemini provider on the free tier so suggest/translate finally return real output. The catch was Gemini 2.5 Flash's default thinking eating the token budget."
+tags: ["gemini", "llm", "bun", "typescript", "backend"]
+---
+
+Up to now the backend was wired but had never produced a real answer — no valid API keys. Rather than set up OpenAI billing, the free **Gemini** tier was the pragmatic call for the validation phase (no card, fast, strong at translation; aligns with `docs/decisions.md` "validate before spending").
+
+## What landed (commit `de3ab15`)
+
+`providers/gemini.ts` uses `@google/genai` with `gemini-2.5-flash`. Because I'd already generalized providers behind one `complete(args)` interface, slotting Gemini in was just: a new file + one entry in the orchestrator's provider registry, placed **ahead of** OpenAI/Anthropic so the free provider is tried first. `runWithFallback` already handles "try each configured provider in order."
+
+The model list was confirmed against the live API with the user's own key (no guessing): `gemini-2.5-flash`, `gemini-3.5-flash`, `gemini-flash-latest`, etc. Picked `gemini-2.5-flash` for free-tier stability.
+
+## The gotcha: thinking ate the output budget
+
+First live test: `/api/translate` worked, but `/api/suggest` returned `502: gemini: no JSON object found in response`, and translate took ~2.3s.
+
+Cause: **Gemini 2.5 Flash runs "thinking" by default, and thinking tokens count against `maxOutputTokens`.** With `maxOutputTokens: 400`, thinking consumed the budget — translate's tiny output squeaked through, but suggest's longer JSON was truncated to nothing. (Recorded in `docs/troubleshooting.md`.)
+
+Fix: `thinkingConfig: { thinkingBudget: 0 }` (disable thinking — these are simple, latency-sensitive tasks, and the product targets sub-second responses) plus `maxOutputTokens: 1024`.
+
+## Real results (verified live, free Gemini key)
+
+```
+/api/translate  "Authorized personnel only"  →  "관계자 외 출입금지"        670ms
+/api/suggest    "Want to grab lunch?"         →  3 toned replies            1096ms
+                (casual / professional / safe)
+```
+
+Disabling thinking cut translate latency 2316ms → 670ms. Both endpoints now return real, well-formed output. `tsc` clean, `bun test` 9/9.
+
+This is the first time the thing actually *answers*. The simulator gets it immediately (sim → `localhost` → Mac backend); the phone needs the backend pointed at the Mac's LAN/ngrok URL.
+
+**Commit:** `de3ab15611a3622931ec74a3e9cb3541609ed21c`

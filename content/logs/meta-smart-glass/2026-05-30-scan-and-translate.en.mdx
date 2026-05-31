@@ -1,0 +1,46 @@
+---
+title: "Scan & Translate: Vision OCR → /api/translate, and a Meta-glasses reality check"
+date: "2026-05-30"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "Second Phase 1 feature — on-device OCR of a menu/sign → Korean translation — plus what I learned about whether the Meta glasses can actually run this yet."
+tags: ["bun", "typescript", "swiftui", "ios", "vision", "ocr", "meta-glasses"]
+---
+
+The camera half of the product: point at an English menu or sign, get Korean. Built the backend brain and the iOS pipeline, source-agnostic so the real glasses feed slots in later.
+
+## Backend — `POST /api/translate` (commit `9f3be50`)
+
+A second route that takes OCR text and returns a short Korean translation (translator prompt from `prompts/translator.md` v0.1 — pure Korean, parenthetical context for unfamiliar items).
+
+Rather than copy the suggest provider code, I generalized it: each provider now exposes a single `complete()` (structured JSON *or* plain text), and `api/llm.ts` has one `runWithFallback()` that both `getSuggestions` and `getTranslation` ride on (OpenAI → Anthropic, key-gated, parse-failure also falls through). Net: less code, one place for the fallback logic.
+
+## iOS — Scan tab (commit `2e951ca`)
+
+`ContentView` is now a `TabView`: **Coach** (the suggestion feature) and **Scan**. Networking + models moved to `BackendClient`; OCR to `OCR.swift`.
+
+The scan flow: `PhotosPicker` → **Apple Vision** OCR on-device (`VNRecognizeTextRequest`) → `POST /api/translate` → translation in the glass-HUD card. Only the extracted *text* leaves the phone — the image stays local (privacy-first, matches `docs/architecture.md`). OCR runs off the main actor by taking `Data` (Sendable) into a `nonisolated` function — clean under Swift 6 strict concurrency.
+
+The image source is deliberately swappable. Today it's `PhotosPicker` (works in the simulator, no camera permission). Next it becomes the phone camera, then the Meta glasses camera feed — same Vision → translate → display pipeline regardless.
+
+## Why this shape — Meta glasses reality check (as of 2026-05, developer preview)
+
+Before committing to the camera path I checked what the Meta Wearables Device Access Toolkit can actually do today. Findings that shaped this feature:
+
+- **Native iOS apps can now render UI (text, images) onto the Ray-Ban Display HUD** — the toolkit added display components in the May 2026 "build for display glasses" rollout. The app runs on the *phone*; the glasses are camera-in + display-out. That maps exactly onto this project's architecture.
+- **The camera path is testable without buying glasses** — the Mock Device Kit simulates a paired Ray-Ban, camera feed (phone camera or h265 video), photo capture, wear state, temple touch. So the OCR→translate loop can be validated for free; only the *display* output likely needs the real Ray-Ban Display (Mock Device Kit looks camera-centric).
+- **You can't ship yet** — publishing is disabled during the developer preview; you can only share with testers. General-availability publishing is slated for 2026.
+
+So: build the camera→translate pipeline now (mock-testable), defer buying the $799 Ray-Ban Display until the display experience is worth feeling — which lines up with the "validate before buying" call in `docs/decisions.md`.
+
+## Verified — and not
+
+- Backend: `tsc` strict clean; `bun test` 9/9; `/api/suggest` (regression) and `/api/translate` both live-wired (structured 502 without valid keys).
+- iOS: `xcodebuild` → **BUILD SUCCEEDED**, no Swift 6 concurrency warnings.
+- Not verified: a real translation round-trip (still gated on valid API keys — `OPENAI_API_KEY` unset, `ANTHROPIC_API_KEY` 401), and the glasses display path (needs developer-preview enrollment + real Ray-Ban Display hardware). On-device Vision OCR itself runs offline and is independent of the key gap.
+
+**Commits:** backend `9f3be50d72ac4227adbaa31a3e1907feb95e3f05`, iOS `2e951ca58cb31f9282e0f230c83cac8ca5c8191c`.
+
+*Meta platform facts above are from Meta's developer docs/announcements (2026-05) and are developer-preview — subject to change.*
