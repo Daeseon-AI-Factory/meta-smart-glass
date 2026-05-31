@@ -1,4 +1,4 @@
-import type { Suggestion, Tone } from "./types";
+import type { LabeledObject, Suggestion, Tone } from "./types";
 
 const TONES: readonly Tone[] = ["professional", "casual", "safe"];
 
@@ -24,6 +24,28 @@ export function parseTranslation(raw: string): string {
   const text = raw.trim();
   if (text === "") throw new Error("empty translation");
   return text;
+}
+
+// 객체 라벨링 응답 → {english, korean}[] 추출 + 검증.
+export function parseObjects(raw: string): LabeledObject[] {
+  const parsed = JSON.parse(extractJsonObject(raw)) as { objects?: unknown };
+  if (!Array.isArray(parsed.objects)) {
+    throw new Error("response has no 'objects' array");
+  }
+  const objects = parsed.objects
+    .map(toLabeledObject)
+    .filter((o): o is LabeledObject => o !== null);
+  if (objects.length === 0) {
+    throw new Error("no valid objects in response");
+  }
+  return objects;
+}
+
+function toLabeledObject(value: unknown): LabeledObject | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { english, korean } = value as { english?: unknown; korean?: unknown };
+  if (typeof english !== "string" || english.trim() === "") return null;
+  return { english: english.trim(), korean: typeof korean === "string" ? korean.trim() : "" };
 }
 
 function extractJsonObject(raw: string): string {

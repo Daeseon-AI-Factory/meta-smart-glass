@@ -1,14 +1,16 @@
-import { complete as geminiComplete, GEMINI_MODEL } from "../providers/gemini";
+import { complete as geminiComplete, completeVision, GEMINI_MODEL } from "../providers/gemini";
 import { complete as openaiComplete, OPENAI_MODEL } from "../providers/openai";
 import { complete as anthropicComplete, ANTHROPIC_MODEL } from "../providers/anthropic";
 import {
   ENGLISH_COACH_SYSTEM,
+  OBJECT_LABEL_SYSTEM,
+  OBJECT_LABEL_USER,
   SUGGESTION_SCHEMA,
   TRANSLATOR_SYSTEM,
   buildUserMessage,
 } from "../prompt";
-import { parseSuggestions, parseTranslation } from "../parse";
-import type { CompleteArgs, Provider, Suggestion } from "../types";
+import { parseObjects, parseSuggestions, parseTranslation } from "../parse";
+import type { CompleteArgs, LabeledObject, Provider, Suggestion } from "../types";
 
 // 설정된 프로바이더가 하나도 없을 때(키 미설정).
 export class NoProviderError extends Error {}
@@ -100,4 +102,34 @@ export async function getTranslation(text: string): Promise<TranslationResponse>
     parse: parseTranslation,
   });
   return { translation: result, provider, model, latencyMs };
+}
+
+export interface ObjectsResponse {
+  objects: LabeledObject[];
+  provider: Provider;
+  model: string;
+  latencyMs: number;
+}
+
+// 객체 라벨링은 멀티모달 → 현재 Gemini 전용 (무료 + 비전). fallback 없음.
+export async function labelObjects(
+  imageBase64: string,
+  imageMimeType: string,
+): Promise<ObjectsResponse> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new NoProviderError("GEMINI_API_KEY required for object labeling (vision)");
+  }
+  const start = performance.now();
+  const raw = await completeVision({
+    system: OBJECT_LABEL_SYSTEM,
+    user: OBJECT_LABEL_USER,
+    imageBase64,
+    imageMimeType,
+  });
+  return {
+    objects: parseObjects(raw),
+    provider: "gemini",
+    model: GEMINI_MODEL,
+    latencyMs: Math.round(performance.now() - start),
+  };
 }

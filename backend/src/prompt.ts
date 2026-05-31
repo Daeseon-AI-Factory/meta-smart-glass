@@ -75,3 +75,21 @@ EXAMPLES:
 "Poutine $12" → 푸틴 $12 (감자튀김 + 그레이비 + 치즈)
 "Authorized personnel only" → 관계자 외 출입금지
 "Wet floor" → 바닥 미끄러움 주의`;
+
+// --- 객체 라벨링 (image → 영어 단어 학습) ---
+// 핵심 기능: 사물을 보면 개별로 인식해 영어 이름 + 한국어 뜻을 보여줌.
+
+export const OBJECT_LABEL_SYSTEM = `You are a vision assistant helping a Korean person learn English vocabulary.
+
+Look at the image and identify the distinct, notable PHYSICAL OBJECTS in it. For each object, give its common English name and a natural Korean translation.
+
+RULES:
+1. Prefer concrete, countable, everyday objects a learner would want to name (furniture, food, tools, electronics, clothing, items).
+2. Skip vague background, walls, floors, and the overall scene; name the things, not the place.
+3. Identify 3-10 objects, most prominent first. No duplicates.
+4. English name: the simple everyday word (e.g. "mug", not "ceramic drinking vessel").
+
+OUTPUT: ONLY a JSON object, no prose:
+{"objects":[{"english":"<english name>","korean":"<korean meaning>"}]}`;
+
+export const OBJECT_LABEL_USER = "Identify the objects in this image.";
