@@ -106,6 +106,26 @@
 
 ---
 
+## 2026-05-31 (cont.): 라벨 UX · 모델 · 배포 방향
+
+### Live/Look 라벨 = 영어만 (한국어 제거)
+**선택**: 박스/칩에 영어 단어만. 한국어 뜻 안 띄움.
+**이유**: 사물이 *눈앞에 보이므로* 시각 자체가 뜻을 전달함 → 새 정보는 *영어 이름*뿐. 유저: "한국어 딱히 필요없다, 내가 보는 사물이 영어로 뭔지 아는 게 중요". (단어장 데이터엔 korean 필드는 보관 — 추후 beginner/B2B 모드 대비.)
+
+### 온디바이스 모델 = yolo11n 유지 (600클래스 OIV7 폐기)
+**선택**: COCO 80짜리 yolo11n 그대로. 600클래스 안 감.
+**이유**: OIV7는 정확도가 절반(mAP~18) → 실기기에서 오히려 덜·느리게 잡힘(troubleshooting 참조). breadth는 모델 키우기 말고 클라우드 탭(Gemini)으로.
+
+### 학습 루프 = 첫 해자 조각 (단어장 + 발음)
+**선택**: Look에서 본 단어 자동 저장(WordStore, Documents JSON) + 단어장 탭 + 탭하면 온디바이스 TTS 발음. spaced-repetition 퀴즈는 다음.
+**이유**: detection은 commodity (경쟁 리서치: Vocam·LingoLens·Lenzo가 이미 함; Meta Ray-Ban은 번역만/유럽 6개어/하드웨어 게이트). 차별화는 "기억시키기" — Lens는 잊고 우린 남긴다. 그리고 진짜 해자는 *기능*도 아니라 **버티컬**(워홀/이민 노동자 직무 영어 → B2B 산업 트레이닝). Meta=번역기(목발), 우리=학습(능력 키움) — 정반대 목표.
+
+### 배포 = AWS App Runner (학습 목적)
+**선택**: Railway가 더 빠르지만 일부러 AWS(App Runner). 컨테이너→ECR→App Runner, 시크릿은 런타임 env.
+**이유**: 이 배포를 teach-first·전부-기록 DevOps 학습 과제로 진행(`content/logs/.../devops-from-zero`). Lambda(Bun 미스핏)·생EC2 제외.
+
+---
+
 ## (Future) Decisions to make
 - [ ] 한국 vs 캐나다 영업/배포 전략 (B2B 피벗 시)
 - [ ] 가격 모델 (구독 vs 일회성 vs B2B)

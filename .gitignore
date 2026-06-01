@@ -25,6 +25,10 @@ Secrets.xcconfig
 .idea/
 .vscode/
 
+# Review tool artifacts (local only)
+claude_review/
+codex_review/
+
 # Claude Code local state (keep shared project hook tracked)
 .claude/*
 !.claude/settings.json

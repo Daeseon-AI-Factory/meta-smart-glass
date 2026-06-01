@@ -1,0 +1,55 @@
+---
+title: "Architecture overview — Meta Smart Glass English Assistant as of 2026-05-31"
+date: "2026-05-31"
+project: "meta-smart-glass"
+kind: "snapshot"
+visibility: "public"
+language: "en"
+summary: "Phase-1 prototype: SwiftUI iOS app (Coach/Scan/Look/Live tabs) talks HTTPS to a Bun backend that orchestrates three LLM providers with Gemini-first fallback; glasses hardware not yet in the loop."
+tags: ["architecture", "snapshot"]
+---
+
+## System shape
+
+```
+[iPhone — SwiftUI app]                  [Bun backend on Mac]            [LLM providers]
+  CoachView   ─── POST /api/suggest ───►  api/suggest.ts ─┐
+  ScanView    ─── POST /api/translate ─►  api/translate.ts├─► api/llm.ts ──► gemini (default)
+  ObjectView  ─── POST /api/label    ──►  api/label.ts ───┘    runWithFallback ──► openai
+  LiveView (on-device YOLO11, no net)                                          └─► anthropic
+  OCR.swift (Apple Vision, on-device) feeds ScanView text
+```
+
+Glasses are not yet wired in. The phone is currently both the I/O surface and the BLE host stand-in.
+
+## Key libs / modules
+
+- `backend/src/index.ts` — `Bun.serve` on port 3001, bound `0.0.0.0`, routes `/health`, `/api/suggest`, `/api/translate`, `/api/label`.
+- `backend/src/api/llm.ts` — provider registry + `runWithFallback` (ORDER: gemini → openai → anthropic, filtered by which env keys are set); vision path is Gemini-only.
+- `backend/src/providers/{gemini,openai,anthropic}.ts` — thin SDK wrappers (`@google/genai`, `openai`, `@anthropic-ai/sdk`); Gemini wrapper sets `thinkingBudget: 0` and `maxOutputTokens: 1024`.
+- `backend/src/prompt.ts` + `backend/src/parse.ts` (+ `parse.test.ts`) — system prompts, JSON schema for suggestions, parsers for the three response shapes.
+- `ios-app/SmartGlass/BackendClient.swift` — reads `BackendBaseURL` from Info.plist; one client for all three endpoints.
+- `ios-app/SmartGlass/{CoachView,ScanView,ObjectView,LiveView}.swift` — four tabs in `ContentView.swift`; `Camera.swift` + `OCR.swift` + `LiveDetection.swift` handle AVFoundation, Vision OCR, and on-device YOLO11 (`yolo11n.mlpackage`).
+- `prompts/{english-coach,translator,vision-labeler}.md` — prompt source-of-truth, mirrored into `backend/src/prompt.ts`.
+
+## Why these choices
+
+- Backend exists to hide API keys and centralize prompts; `CLAUDE.md` calls out "API 키 절대 client-side X" and all three iOS views go through `BackendClient`, not the LLM SDKs directly.
+- Gemini ordered first in `ORDER` because the free tier covers the daily-user prototype; OpenAI/Anthropic are fallbacks only if their keys are present (`llm.ts` line 30, comment "무료 Gemini 우선").
+- Vision/labeling does not use `runWithFallback` — `labelObjects` short-circuits to Gemini because only that provider wrapper currently exposes a vision path (`completeVision`).
+- Live object detection runs on-device (`LiveDetection.swift`, YOLO11n CoreML package) instead of round-tripping frames to the backend; only the static `/api/label` snapshot path hits the cloud.
+- Bun binds `0.0.0.0` so a physical iPhone on the same LAN can reach the Mac via its `.local` mDNS hostname (see troubleshooting entry "Real-device backend access").
+
+## Boundaries
+
+- `docs/architecture.md` — authoritative target architecture incl. glasses/BLE, performance budget, future B2B multi-tenant shape. Diagram there is the intended end state; this snapshot reflects what code actually exists today.
+- `docs/decisions.md` — decision log (Swift native vs Flutter, iOS first, cloud LLM first).
+- `docs/use-cases.md` — product/UX scope.
+- `docs/troubleshooting.md` — problem-indexed fixes (Swift 6 concurrency + AVFoundation, Gemini thinking-budget, phone↔Mac LAN access).
+- `CLAUDE.md` — tech-stack lock, code conventions, security/perf/privacy constraints.
+- `prompts/*.md` — canonical prompt copy.
+
+## State of completion
+
+Phase 1 prototype: three backend endpoints working with multi-provider fallback, four iOS tabs (Coach, Scan, Look, Live) wired to the backend or to on-device ML, running against a physical iPhone over LAN. Glasses hardware, BLE link, STT, and any persistence beyond `WordStore.swift` are not implemented. Product direction is still being debated between "labeling" and "learning" framings (see 2026-05-31 product-direction log).
+

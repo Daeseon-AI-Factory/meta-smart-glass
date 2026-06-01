@@ -1,0 +1,82 @@
+---
+title: "DevOps from zero on one app: debugging to containers to cloud (live log)"
+date: "2026-05-31"
+project: "meta-smart-glass"
+kind: "tech-retro"
+visibility: "public"
+language: "en"
+summary: "A living log of taking one app (the Smart Glass backend) from local debugging and setup all the way to AWS deployment and DevOps — recording every question asked and every dead end hit, step by step. The goal: get real, practical DevOps fundamentals out of this single app."
+tags: ["devops", "docker", "aws", "bun", "deployment", "learning"]
+---
+
+This is a *living log*. I'm taking one app (this project's Bun backend) from local debugging through containerization → cloud deploy → CI/CD → monitoring → IaC, and pinning down **the questions I asked, where I got stuck, and how it resolved** — one by one. Not a tutorial; only what actually happened.
+
+## Why do it this way
+
+DevOps isn't memorized from articles — it's learned by *debugging real failures*. So I'm taking one real app from zero to deployed, deeply. "Mastery" is an overstatement, but this single app gets me to "I can deploy and operate a service on my own" — and the record itself becomes a portfolio.
+
+## Roadmap (checklist)
+
+- [x] Local backend (Bun, bind `0.0.0.0`, `.local` mDNS for on-device access)
+- [x] Networking debug — IPv4/IPv6 port conflict
+- [x] Containerization — Dockerfile, `.dockerignore`, layer caching, local verification
+- [ ] Registry — push to ECR (amd64 build)
+- [ ] Cloud deploy — AWS App Runner, managed HTTPS
+- [ ] Secrets — inject via env (never in image/git)
+- [ ] iOS wiring — `BackendBaseURL` → https, tighten ATS
+- [ ] CI/CD — GitHub Actions (push → build → push → deploy)
+- [ ] Monitoring/logs — CloudWatch, health checks
+- [ ] IaC — reproduce infra as code (Terraform/CDK)
+- [ ] Cost control — pause/delete, billing alarms
+
+---
+
+## Episode 1 — phone "could not connect": IPv4 vs IPv6 port conflict
+
+**Symptom.** The Look tab failed on the phone, and on the Mac `http://localhost:3001/health` returned **Grafana HTML**, not our backend.
+
+```
+backend: ALREADY RUNNING
+<!DOCTYPE html> ... <title>Grafana</title> ...
+```
+
+**Cause (verified).** `lsof` showed two processes LISTENing on 3001 at once:
+
+```
+bun        6559  ... TCP *:3001 (LISTEN)        # our backend (IPv4)
+com.docke 16261  ... TCP [::]:3001 (LISTEN)     # Docker (Grafana container) (IPv6)
+```
+
+`localhost` resolves IPv6 (`::1`) first, so it hit Docker/Grafana. When the phone reached `.local:3001` and it resolved over IPv6, it landed on Grafana and broke.
+
+**Fix.** Moved our backend off the contested port: `backend/.env` `PORT=3001 → 8787`, and `ios-app/project.yml` `BackendBaseURL` to `:8787`. Left Grafana (Docker) untouched.
+
+**Lesson.** One port number can have *separate* IPv4 and IPv6 bindings. Because of `localhost` resolution order (usually IPv6 first), you can "start your server" and still get someone else's response. Always check what holds a host port with `lsof -nP -iTCP:<port> -sTCP:LISTEN`.
+
+## Episode 2 — containerization: the Dockerfile and excluding secrets
+
+Before deploying, package the app as a "box that runs identically anywhere." Two key files:
+
+- `backend/Dockerfile` — `oven/bun:1-slim` base, copy deps manifest first then `bun install` (layer cache), copy source, `ENV PORT=8080`, `CMD ["bun","src/index.ts"]`.
+- `backend/.dockerignore` — **excludes `.env` (secrets) from the image.** Keys are injected as runtime env vars, never baked into the image.
+
+**Lesson.** Image = frozen template, container = a running instance of it, Dockerfile = the recipe. Copy the dependency manifest *before* the source so that when only source changes, `install` is cached and builds stay fast. Never put secrets in the image or git.
+
+## Episode 3 — the "Up but health fails" trap
+
+**Symptom.** After `docker run`, `curl /health` from the host failed, yet `docker logs` was **empty** and `docker ps` showed the container **Up**. No crash, but no response — a contradiction.
+
+**Cause (verified).** Poking from *inside* the container with `bun -e 'fetch(...)'` returned a healthy response, and the logs did contain `Server running at http://localhost:8080`. So the server was fine; the *verification* was the bug:
+- `curl --retry-connrefused` only retries on "connection refused." But Docker's port proxy opens the host port *immediately*, so while the app is still booting you get a **connection reset**, not "refused" → the retries never engaged and it gave up before the ~1s boot finished.
+
+**Fix.** Poll from inside the container or wait long enough before checking. The image itself is fine (372MB, builds, runs, passes `/health`).
+
+**Lesson.** A failing health check can be the *tooling/timing*, not the *application*. On "Up + empty logs + no response," first probe from inside the container to separate the app layer from the network layer.
+
+## Decision — deploy target: Railway vs AWS
+
+On speed alone, Railway/Render (HTTPS in minutes) wins. But the goal here is to *learn DevOps*, so I deliberately chose AWS. The sane path is **App Runner** (container → HTTPS → autoscale, closest to Railway). Lambda (Bun mismatch), raw EC2, and ECS are overkill for this stage, so they're out.
+
+---
+
+*That's today. The next episodes (ECR push → App Runner → HTTPS → iOS wiring → CI/CD …) get appended as I go.*
