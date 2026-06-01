@@ -34,7 +34,8 @@ targets:
           NSAllowsLocalNetworking: true
         NSCameraUsageDescription: "Scan menus and signs in front of you to translate them to Korean."
         # .local 호스트명 → IP 바뀌어도 안 깨짐(mDNS). 폰·Mac 같은 WiFi면 됨(핫스팟 mDNS는 불안정).
-        BackendBaseURL: "http://Daeseons-MacBook-Pro.local:3001"
+        # 포트 8787: 3001은 Docker(Grafana)가 IPv6로 같이 물고 있어 폰이 엉뚱하게 붙던 충돌 회피.
+        BackendBaseURL: "http://Daeseons-MacBook-Pro.local:8787"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.daeseon.smartglass
