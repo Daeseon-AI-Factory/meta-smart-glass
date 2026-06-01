@@ -85,19 +85,15 @@ struct DetectionBoxView: View {
             .stroke(Color.green, lineWidth: 2)
             .frame(width: w, height: h)
             .overlay(alignment: .topLeading) {
-                HStack(spacing: 4) {
-                    Text(detection.label)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                    if !detection.korean.isEmpty {
-                        Text(detection.korean).font(.system(size: 11))
-                    }
-                }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(Color.green))
-                .fixedSize()
-                .offset(y: -20)
+                // 영어 단어만 — 보고 있는 사물의 영어 이름을 아는 게 핵심. 사물 자체가 보이니 뜻(한국어)은 불필요.
+                Text(detection.label)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.green))
+                    .fixedSize()
+                    .offset(y: -20)
             }
             .position(x: x + w / 2, y: y + h / 2)
     }

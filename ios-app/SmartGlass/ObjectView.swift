@@ -11,6 +11,8 @@ struct ObjectView: View {
     @State private var objects: [LabeledObject] = []
     @State private var status: ScanStatus = .idle
     @State private var showLabels = true
+    // 라벨링된 단어를 단어장에 자동 누적 — "Lens는 잊고, 우린 기억한다".
+    @EnvironmentObject private var wordStore: WordStore
 
     var body: some View {
         ZStack {
@@ -98,9 +100,6 @@ struct ObjectView: View {
                     Text(object.english)
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
-                    Text(object.korean)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.green.opacity(0.75))
                     Spacer()
                 }
             }
@@ -133,6 +132,7 @@ struct ObjectView: View {
             let jpeg = downscaledJPEG(data)
             let response = try await Backend.labelObjects(jpegData: jpeg)
             objects = response.objects
+            wordStore.addAll(response.objects)   // 본 단어 단어장에 자동 저장
             status = .success(meta: "\(response.objects.count) objects · \(response.provider) · \(response.latencyMs)ms")
         } catch let BackendError.server(message) {
             status = .failure(message)

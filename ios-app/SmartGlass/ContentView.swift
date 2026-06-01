@@ -8,6 +8,8 @@ struct ContentView: View {
                 .tabItem { Label("Live", systemImage: "viewfinder") }
             ObjectView()
                 .tabItem { Label("Look", systemImage: "eye.fill") }
+            WordsView()
+                .tabItem { Label("Words", systemImage: "book.fill") }
             ScanView()
                 .tabItem { Label("Scan", systemImage: "camera.viewfinder") }
             CoachView()
@@ -19,4 +21,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(WordStore())
 }

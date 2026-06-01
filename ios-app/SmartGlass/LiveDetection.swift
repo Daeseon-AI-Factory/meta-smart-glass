@@ -81,7 +81,7 @@ final class LiveDetector: NSObject, ObservableObject {
         Task { await setRunning(false) }
     }
 
-    // yolo11n.mlpackage를 Xcode에 추가하면 yolo11n.mlmodelc로 컴파일됨. 이름으로 런타임 로드(없으면 .noModel).
+    // yolo11n(COCO 80) CoreML — 빠르고 정확. breadth는 탭→클라우드 하이브리드로 보완(600 on-device는 정확도 안 나옴).
     private func loadModel() -> Bool {
         guard let url = Bundle.main.url(forResource: "yolo11n", withExtension: "mlmodelc") else {
             return false
@@ -152,7 +152,8 @@ extension LiveDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
             return Detection(
                 id: UUID(),
                 label: top.identifier,
-                korean: cocoKorean[top.identifier] ?? "",
+                // 600클래스 중 겹치는 흔한 단어만 한국어(소문자 매칭). 나머지는 영어만 → 한국어는 추후 탭→번역.
+                korean: cocoKorean[top.identifier.lowercased()] ?? "",
                 box: rect,
                 confidence: top.confidence,
             )
